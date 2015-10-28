@@ -1,0 +1,11 @@
+{
+	"browserify":
+	{
+		"transform": [
+			[ "babelify",
+			{
+				"stage": "0"
+			} ]
+		]
+	}
+}
