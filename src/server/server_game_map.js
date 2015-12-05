@@ -1,8 +1,8 @@
-import GameMap from './game_map';
 import Score from './score';
-import Snapshot from './snapshot';
-import SnapshotList from './snapshot_list';
-import Noise from './noise';
+import GameMap from '../common/game/game_map';
+import Snapshot from '../common/snapshot/snapshot';
+import SnapshotList from '../common/snapshot/snapshot_list';
+import Noise from '../common/util/noise';
 
 let SNAPSHOT_LIMIT = 100,
 	SNAPSHOT_DELAY = 3,

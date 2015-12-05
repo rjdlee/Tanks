@@ -1,50 +1,61 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<link href='main.css' rel='stylesheet'/>
+	<link href='styles/main.css' rel='stylesheet'/>
 	<title>Tank Time</title>
 </head>
 <body>
-<div id='menu' class='unselectable'>
-	<div class='col-5'>
-	<h1>Tank Time</h1>
-	<p>You are a tank, shoot the other tanks.</p>
-	<input id='menu-name' type='text' placeholder='Name'/><button id='menu-play'>Play</button>
+<div id='ui'>
+	<div id='menu' class='unselectable'>
+		<div class='col-5'>
+			<h1>
+				Tank Time
+			</h1>
+			<p>
+				You are a tank, shoot the other tanks.
+			</p>
+			<input id='menu_name' type='text' placeholder='Name'/>
+			<button id='menu_play' disabled='true'>Play</button>
+		</div>
+		<div class='col-5'>
+		<table>
+			<tr>
+				<td><span class='key'>↑</span></td>
+				<td>Forward</td>
+			</tr><tr>
+				<td><span class='key'>←</span></td>
+				<td>Turn Left</td>
+			</tr><tr>
+				<td><span class='key'>→</span></td>
+				<td>Turn Right</td>
+			</tr><tr>
+				<td><span class='key'>↓</span></td>
+				<td>Backward</td>
+			</tr><tr>
+				<td><span class='key'>Mouse</span></td>
+				<td>Aim</td>
+			</tr><tr>
+				<td><span class='key'>Click</span></td>
+				<td>Shoot</td>
+			</tr>
+		</table>
+		</div>
 	</div>
-	<div class='col-5'>
-	<table>
-		<tr>
-			<td><span class='key'>↑</span>
-				<span class='key'>W</span></td>
-			<td>Forward</td>
-		</tr><tr>
-			<td><span class='key'>←</span>
-				<span class='key'>A</span></td>
-			<td>Turn Left</td>
-		</tr><tr>
-			<td><span class='key'>→</span>
-				<span class='key'>S</span></td>
-			<td>Turn Right</td>
-		</tr><tr>
-			<td><span class='key'>↓</span>
-				<span class='key'>D</span></td>
-			<td>Backward</td>
-		</tr><tr>
-			<td><span class='key'>Mouse</span></td>
-			<td>Aim</td>
-		</tr><tr>
-			<td><span class='key'>Click</span></td>
-			<td>Shoot</td>
-		</tr>
-	</table>
+	<div id='loading' class='unselectable' style='visibility: hidden;'>
+		<div class='col-10'>
+			<p>Loading...</p>
+		</div>
+	</div>
+	<div id='hud' class='unselectable' style='visibility: hidden;'>
+		<div id='hud_score' class='unselectable'></div>
+		<ol id='hud_leaderboard' class='unselectable'></ol>
 	</div>
 </div>
-<div id='score' class='unselectable'></div>
-<ol id='leaderboard' class='unselectable'></ol>
-<canvas id='walls-canvas' width=1200 height=710></canvas>
-<canvas id='players-canvas' width=1200 height=710></canvas>
+<canvas id='walls_canvas' width=1200 height=710></canvas>
+<canvas id='tanks_canvas' width=1200 height=710></canvas>
 
-<script src='socket.io.js'></script>
+<script type='text/javascript' src='socket.io.js'></script>
+<script type='text/javascript' src='state-machine.js'></script>
 <script type='text/javascript' src='client.js'></script>
 </body>
 </html>

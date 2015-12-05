@@ -10,196 +10,195 @@ Right	3			7
 
 */
 
-export default class Connect_Class
+import Controller from './ui/controller';
+import UI from './ui/ui';
+import Event from '../common/state/event';
+import Game from '../common/game/game';
+import GameState from '../common/state/state';
+import GameMapState from '../common/game/game_map_state';
+
+const local_server_URI = 'http://localhost:3000';
+const remote_server_URI = 'http://tankti.me:3000';
+
+class Connect_Class
 {
 	constructor()
 	{
-		this.stateQueue = {};
+		// Events to be sent to server
+		this.state_queue = new Map();
 
-		this.socket = io( 'http://localhost:3000' );
+		// Time when events are sent to server
+		this.state_time = new Date();
 
-		this.socket.on( 'connect', function ()
-		{
-			this.socket.emit( 'init', name );
+		this.socket = io( local_server_URI );
+		this.socket.on( 'connect', this.connect_handler.bind( this ) );
+		this.socket.on( 'connect_error', this.connect_error_handler.bind( this ) );
 
-			this.socket.on( 'init', this.connectHandler );
-			this.socket.on( 'disconnect', this.disconnectHandler );
-			this.socket.on( 'e', this.eventHandler );
-		}.bind( this ) );
+		Event.subscribe( 'controller_aim', this.pushStateEvent.bind( this, 'm', 1 ) );
+		Event.subscribe( 'controller_shoot', this.pushStateEvent.bind( this, 's' ), 1 );
+		Event.subscribe( 'controller_up', this.pushStateEvent.bind( this, 'u' ) );
+		Event.subscribe( 'controller_down', this.pushStateEvent.bind( this, 'd' ) );
+		Event.subscribe( 'controller_left', this.pushStateEvent.bind( this, 'l' ) );
+		Event.subscribe( 'controller_right', this.pushStateEvent.bind( this, 'r' ) );
+		Event.subscribe( 'controller_no_move', this.pushStateEvent.bind( this, 'm' ) );
+		Event.subscribe( 'controller_no_turn', this.pushStateEvent.bind( this, 't' ) );
 
-		// Attempt different servers if failed to connect to this one
-		this.socket.on( 'connect_error', function ()
-		{
-			if ( this.socket.io.uri === 'http://localhost:3000' )
-				this.socket.io.uri = 'http://tankti.me:3000';
-			else
-				this.socket.io.uri = 'http://localhost:3000';
-		}.bind( this ) );
-
-		this.setListeners();
+		GameState.onload = this.sync_handler.bind( this );
+		GameState.onterminate = this.close_socket.bind( this );
 	}
 
 	// Add an event to the queue to be sent to the server
 	pushStateEvent( key, data )
 	{
-		this.stateQueue[ key ] = data;
+		console.log( key, data );
+		this.state_queue.set( key, data );
 	}
 
 	// Send the queue of events to the server
-	sendStateQueue()
+	send_state_queue()
 	{
-		if ( Object.keys( this.stateQueue ).length === 0 )
+		if ( Object.keys( this.state_queue ).length === 0 )
 			return false;
 
-		this.stateQueue.t = Date.now();
-		this.socket.emit( 'e', this.stateQueue );
+		this.state_time = Date.now();
+		this.socket.emit( 'e', this.state_queue );
 
-		this.stateQueue = {};
+		this.state_queue.clear();
 	};
 
-	setListeners()
+	close_socket()
 	{
-		window.onbeforeunload = function ()
-		{
-			if ( this.socket )
-				this.socket.close();
-		};
-	};
-
-	connectHandler( data )
-	{
-		// Create a map
-		map = new Map( data.boundX, data.boundY );
-		renderer = new Renderer( data.boundX, data.boundY );
-
-		// Create new players
-		for ( var id in data.players )
-		{
-			var player = data.players[ id ];
-
-			// Create a new player
-			if ( player.id !== data.id )
-			{
-				map.players[ player.id ] = new Player( player.id, player.pos.x, player.pos.y, player.angle );
-				continue;
-			}
-		}
-
-		// Create a new controller
-		map.players[ data.id ] = controller = new Controller( this.socket.id );
-		controller.addCamera( window.innerWidth, window.innerHeight );
-
-		// An error has occurred
-		if ( !controller )
-			return;
-
-		// Create map walls
-		for ( var id in data.walls )
-		{
-			var wall = data.walls[ id ];
-			map.walls.push( new Wall( wall.pos.x, wall.pos.y, wall.width, wall.height ) );
-		}
-
-		map.grid = data.grid;
-		renderer.renderWalls( map.grid, controller.camera );
-
-		for ( var id in data.projectiles )
-		{
-			var projectile = data.projectiles[ id ];
-			map.projectiles[ projectile.id ] = new Projectile( projectile.pid, projectile.pos.x, projectile.pos.y, projectile.angle, projectile.speed );
-		}
-
-		drawLeaderboard( data.id, data.leaderboard );
-		play();
+		if ( this.socket )
+			this.socket.close();
 	}
 
-	disconnectHandler()
+	connect_handler()
 	{
-		if ( animationClock )
-			window.cancelAnimationFrame( animationClock );
-
-		animationClock = undefined;
-		controller = undefined;
-		map = undefined;
+		GameState.connect();
+		this.socket.on( 'disconnect', this.disconnect_handler.bind( this ) );
 	}
 
-	eventHandler( data )
+	// Attempt different servers if failed to connect to this one
+	connect_error_handler()
 	{
-		if ( !map )
-			return;
+		if ( this.socket.io.uri === local_server_URI )
+			this.socket.io.uri = remote_server_URI;
+		else
+			this.socket.io.uri = local_server_URI;
+	}
 
-		if ( !controller )
-			return;
+	sync_handler()
+	{
+		// Tell server to send game state
+		this.socket.emit( 'handshake', UI.name );
 
-		for ( var id in data.players )
+		// Receive server's game state
+		this.socket.on( 'handshake', this.handshake_handler.bind( this ) );
+
+		// Listen for server's events
+		this.socket.on( 'e', this.event_handler.bind( this ) );
+	}
+
+	handshake_handler( data )
+	{
+		console.log( data );
+		let game_map = GameMapState.decode( data, Game.game_map );
+		let player = game_map.tanks.get( this.socket.id );
+
+		if ( !player )
 		{
-			var player = data.players[ id ];
+			this.socket.emit( 'handshake', UI.name );
+			return;
+		}
 
-			if ( player === 'remove' )
+		game_map.grid = data.grid;
+		game_map.controller = new Controller( player );
+
+		GameState.play();
+	}
+
+	disconnect_handler()
+	{
+		GameState.disconnect();
+	}
+
+	event_handler( data )
+	{
+		if ( !Game.game_map )
+			return;
+
+		if ( !Game.controller )
+			return;
+
+		for ( var id in data.tanks )
+		{
+			var tank = data.tanks[ id ];
+
+			if ( tank === 'remove' )
 			{
-				map.removePlayer( id );
+				game_map.removeTank( id );
 				continue;
 			}
 
-			if ( 'add' in player )
+			if ( 'add' in tank )
 			{
-				var playerData = player.add,
-					player;
+				var tankData = tank.add,
+					tank;
 
 				if ( id === this.socket.id )
 				{
-					controller.setPos( playerData.pos.x, playerData.pos.y );
-					controller.camera.moveTo( playerData.pos.x, playerData.pos.y, map.width, map.height );
+					Game.controller.setPos( tankData.pos.x, tankData.pos.y );
+					Game.controller.camera.moveTo( tankData.pos.x, tankData.pos.y, game_map.width, game_map.height );
 
 					continue;
 				}
 
-				map.players[ id ] = player = new Player( id, playerData.pos.x, playerData.pos.y, playerData.angle );
-				player.setVelocity( playerData.speed );
-				player.barrel.setAngle( playerData.heading );
+				game_map.tanks[ id ] = tank = new Tank( id, tankData.pos.x, tankData.pos.y, tankData.angle );
+				tank.setVelocity( tankData.speed );
+				tank.barrel.setAngle( tankData.heading );
 
 				continue;
 			}
 
-			if ( 'pos' in player )
+			if ( 'pos' in tank )
 			{
-				var pos = new Vector( player.pos.x, player.pos.y ),
-					mapPlayer = map.players[ id ];
+				var pos = new Vector( tank.pos.x, tank.pos.y ),
+					mapTank = game_map.tanks[ id ];
 
-				mapPlayer.nextPos = pos.diff( mapPlayer.pos );
-				// map.players[ id ].setPos( player.pos.x, player.pos.y );
+				mapTank.next_pos = pos.diff( mapTank.pos );
+				// game_map.tanks.get(id).setPos( tank.pos.x, tank.pos.y );
 			}
 
-			if ( 'angle' in player )
+			if ( 'angle' in tank )
 			{
-				map.players[ id ].setAngle( player.angle );
-				// map.players[ id ].angle.nextRad = map.players[ id ].angle.rad - player.angle;
+				game_map.tanks.get( id ).setAngle( tank.angle );
+				// game_map.tanks.get(id).angle.nextRad = game_map.tanks.get(id).angle.rad - tank.angle;
 			}
 
-			if ( 'facing' in player )
-				map.players[ id ].barrel.setAngle( player.facing );
+			if ( 'facing' in tank )
+				game_map.tanks.get( id ).barrel.setAngle( tank.facing );
 
-			if ( 'speed' in player )
-				map.players[ id ].setVelocity( player.speed );
+			if ( 'speed' in tank )
+				game_map.tanks.get( id ).setVelocity( tank.speed );
 		}
-		// if ( data.projectiles )
-		// console.log( data.projectiles );
-		for ( var id in data.projectiles )
+		// if ( data.bullets )
+		// console.log( data.bullets );
+		for ( var id in data.bullets )
 		{
-			var projectile = data.projectiles[ id ];
+			var bullet = data.bullets[ id ];
 
-			if ( projectile === 'remove' )
+			if ( bullet === 'remove' )
 			{
-				map.removeProjectile( id );
+				game_map.removeBullet( id );
 
 				continue;
 			}
 
-			if ( 'add' in projectile )
+			if ( 'add' in bullet )
 			{
-				var projectileData = projectile.add;
-				map.projectiles[ id ] = new Projectile(
-					projectileData.pid, projectileData.pos.x, projectileData.pos.y, projectileData.angle, projectileData.speed );
+				var bulletData = bullet.add;
+				game_map.bullets[ id ] = new Bullet(
+					bulletData.pid, bulletData.pos.x, bulletData.pos.y, bulletData.angle, bulletData.speed );
 			}
 
 		}

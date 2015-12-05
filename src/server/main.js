@@ -1,108 +1,79 @@
-import Game from 'game/game';
-import Util from 'util/util';
+import Game from '../common/game/game';
+import ServerGameMap from './game_map';
+import GameLoop from '../common/game/game_loop';
+import GameMapState from '../common/game/game_map_state';
+import Wall from '../common/entity/wall';
 
-var game = new Game(),
+Game.game_map = new ServerGameMap();
 
-	// Track player events
-	stateQueue = new Map();
-
-module.exports = function ( io )
+export default class Connect
 {
-	init();
-
-	var now,
-		dt,
-		last = Util.timestamp();
-
-	function init()
+	constructor( io )
 	{
-		setInterval( frame, 1000 / 60 );
+		this.state_queue = new Map();
+		this.loop = new GameLoop( Game.update.bind( Game ), this.render.bind( this, io ) );
+		this.loop.start();
+
+		io.on( 'connection', this.connect_handler.bind( this ) );
 	}
 
-	function frame()
+	render( io )
 	{
-		now = Util.timestamp();
-		dt = ( now - last ) / 1000; // In seconds
-
-		update( dt );
-		render();
-
-		last = now;
-	}
-
-	function update( dt )
-	{
-		game.update( dt );
-	}
-
-	function render()
-	{
-		if ( game.map.tick % 60 === 0 )
+		if ( Game.game_map.tick % 60 === 0 )
 		{
-			if ( !game.map.isReplayingSnapshot )
-				game.map.saveSnapshot();
+			if ( !Game.game_map.isReplayingSnapshot )
+			{
+				Game.game_map.saveSnapshot();
+			}
 
-			var stateChange = game.map.diffSnapshot( game.map.snapshots.head, game.map.snapshots.head.prev );
+			var stateChange = Game.game_map.diffSnapshot( Game.game_map.snapshots.head, Game.game_map.snapshots.head.prev );
 
 			if ( Object.keys( stateChange ).length > 0 )
 				io.sockets.emit( 'e', stateChange );
 		}
 	}
 
-	io.on( 'connection', function ( socket )
+	connect_handler( socket )
 	{
-		( playerConnectHandler.bind( socket ) )();
+		console.log( socket.id + ' connected.' );
 
-		socket.on( 'disconnect', playerDisconnectHandler.bind( socket ) );
-		socket.on( 'e', playerEventHandler.bind( socket ) );
-	} );
-
-	function playerConnectHandler()
-	{
-		// map.saveSnapshot();
-
-		var id = this.id,
-			player = map.spawn( id ),
-			playerLog = id in stateQueue ? stateQueue[ id ] : new Object();
-
-		var snapshot = map.snapshots.head.getData();
-		snapshot.id = id;
-		snapshot.boundX = map.width;
-		snapshot.boundY = map.height;
-		snapshot.leaderboard = map.score.leaderboard;
-		snapshot.grid = map.grid;
-
-		// Get the client up to date with its id, pos, and the other players
-		this.emit( 'init', snapshot );
-		this.on( 'init', function ( data )
-		{
-			map.players[ id ].name = data;
-		}.bind( id ) );
-
-		playerLog.pos = player.pos;
-		stateQueue[ id ] = playerLog;
-
-		console.log( id + ' connected.' );
+		socket.on( 'handshake', this.handshake_handler.bind( socket ) );
+		socket.on( 'disconnect', this.disconnect_handler.bind( socket ) );
+		socket.on( 'e', this.event_handler.bind( socket ) );
 	}
 
-	function playerDisconnectHandler()
+	handshake_handler( data )
+	{
+		let id = this.id;
+		let tank = Game.game_map.randomly_spawn_tank( id );
+		tank.name = data || 'Tank';
+
+		setTimeout( function ()
+		{
+			var snapshot = Game.game_map.snapshots.head.data;
+			snapshot.leaderboard = Game.game_map.score.leaderboard;
+			snapshot.grid = Game.game_map.grid;
+
+			this.emit( 'handshake', snapshot );
+		}.bind( this ), 1000 );
+	}
+
+	disconnect_handler()
 	{
 		var id = this.id;
 
 		// If the player was on the leaderboard, remove them from it
-		if ( map.score.remove( id ) )
-			playerLog.leaderboard = scoreboard.getLeaderboard();
+		Game.game_map.score.remove( id )
 
 		// Remove the player from the map
-		map.removePlayer( id );
+		Game.game_map.remove_tank( id );
 
 		console.log( id + ' disconnected.' );
 	}
 
-	function playerEventHandler( e )
+	event_handler( e )
 	{
 		var id = this.id,
-			playerLog = id in stateQueue ? stateQueue[ id ] : new Object(),
 			player = map.players[ id ];
 
 		if ( !player )
@@ -164,23 +135,5 @@ module.exports = function ( io )
 		}
 
 		map.replaySnapshot();
-
-		stateQueue[ id ] = playerLog;
 	}
-};
-
-// Record change events
-function pushStateEvent( id, key, data )
-{
-	var playerState = {};
-	if ( id in stateQueue )
-		playerState = stateQueue[ id ];
-
-	if ( key in playerState )
-		playerState[ key ].push( data )
-	else
-		playerState[ key ] = [ data ];
-
-	stateQueue[ id ] = playerState;
-	stateChange = true;
 }

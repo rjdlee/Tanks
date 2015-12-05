@@ -1,43 +1,35 @@
-import ServerGameMap from './server_game_map';
-import Collision from './collision';
-import Explosion from './explosion';
-import ObjectPool from './object_pool';
+import Collision from '../common/collision/collision';
+import Explosion from '../common/entity/explosion';
+import ObjectPool from '../common/util/object_pool';
+import ServerGameMap from '../common/game/game_map';
+import Game from '../common/game/game';
 
-export default class Game
+export default class ServerGame extends Game
 {
 	constructor()
 	{
-		this.map = new ServerGameMap();
+		super();
 
-		this.collision_pool = new ObjectPool( 3, Collision );
-		this.explosion_pool = new ObjectPool( 10, Explosion );
-	}
-
-	update( dt )
-	{
-		this.update_tanks( dt );
-		this.update_bullets( dt );
-		this.update_mines( dt );
-		this.update_explosions( dt );
+		this.game_map = new ServerGameMap();
 	}
 
 	update_tanks( dt )
 	{
 		let collision = this.collision_pool.get();
 
-		for ( let [ id, tank ] in this.map.tanks )
+		for ( let [ id, tank ] in this.game_map.tanks )
 		{
 			if ( tank.rotation.speed !== 0 )
 			{
 				tank.turn( tank.rotation.speed * dt );
 
-				for ( let [ id, wall ] of this.map.walls )
+				for ( let [ id, wall ] of this.game_map.walls )
 				{
 					if ( collision.is_colliding( tank, wall ) )
 						player.rotateAlongWall( collision.edge, collision.overlap );
 				}
 
-				for ( let [ id, collision_tank ] of this.map.tanks )
+				for ( let [ id, collision_tank ] of this.game_map.tanks )
 				{
 					if ( collision.is_colliding( tank, collision_tank ) )
 						player.rotateAlongPlayer( collision.edge.unit_vector() );
@@ -48,13 +40,13 @@ export default class Game
 			{
 				let velocity = player.velocity.clone();
 
-				for ( let [ id, wall ] of this.map.walls )
+				for ( let [ id, wall ] of this.game_map.walls )
 				{
 					if ( collision.is_colliding( tank, wall ) )
 						velocity.project( collision.edge.unit_vector() );
 				}
 
-				for ( let [ id, collision_tank ] of this.map.tanks )
+				for ( let [ id, collision_tank ] of this.game_map.tanks )
 				{
 					if ( collision.is_colliding( tank, collision_tank ) )
 						velocity.project( collision.edge.unit_vector() );
@@ -103,37 +95,37 @@ export default class Game
 	{
 		let collision = this.collision_pool.get();
 
-		for ( let [ id, bullet ] of this.map.bullets )
+		for ( let [ id, bullet ] of this.game_map.bullets )
 		{
 			let velocity_x = bullet.velocity.x,
 				velocity_y = bullet.velocity.y;
 
 			// Cancel bullets
-			for ( let [ id, collision_bullet ] of this.map.bullets )
+			for ( let [ id, collision_bullet ] of this.game_map.bullets )
 			{
 				collision = bullet.isRectangleCollision( collision_bullet );
 
 				if ( collision )
 				{
-					this.map.remove_bullet( bullet );
-					this.map.remove_bullet( collision_bullet );
+					this.game_map.remove_bullet( bullet );
+					this.game_map.remove_bullet( collision_bullet );
 				}
 			}
 
 			// Explode mines
-			for ( let [ id, mine ] of this.map.mines )
+			for ( let [ id, mine ] of this.game_map.mines )
 			{
 				collision = bullet.isRectangleCollision( mine );
 
 				if ( collision )
 				{
-					this.map.remove_bullet( bullet );
-					this.map.remove_mine( mine );
+					this.game_map.remove_bullet( bullet );
+					this.game_map.remove_mine( mine );
 				}
 			}
 
 			// Bounce off walls
-			for ( let [ id, wall ] of this.map.walls )
+			for ( let [ id, wall ] of this.game_map.walls )
 			{
 				collision = bullet.isRectangleCollision( wall );
 
@@ -154,22 +146,22 @@ export default class Game
 
 	update_mines( dt )
 	{
-		for ( var [ id, mine ] of this.map.mines )
+		for ( var [ id, mine ] of this.game_map.mines )
 		{
 			if ( mine.count_down( dt ) )
 			{
-				this.map.remove_mine( mine );
+				this.game_map.remove_mine( mine );
 			}
 		}
 	}
 
 	update_explosions( dt )
 	{
-		for ( var [ id, explosion ] of this.map.explosions )
+		for ( var [ id, explosion ] of this.game_map.explosions )
 		{
 			if ( explosion.count_down( dt ) )
 			{
-				this.map.remove_explosion( explosion );
+				this.game_map.remove_explosion( explosion );
 			}
 		}
 	}

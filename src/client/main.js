@@ -1,47 +1,37 @@
-import Util from 'util/util';
-import Game from 'game/game';
-import DOM from './dom';
 import Connect from './connect';
+import Controller from './ui/controller';
+import Event from '../common/state/event';
+import Game from '../common/game/game';
+import GameLoop from '../common/game/game_loop';
+import GameState from '../common/state/state';
+import Render from './render/render';
+import UI from './ui/ui';
+import Util from '../common/util/util';
 
-var renderer,
-	map,
-	name,
-	controller,
-	animationClock;
-
-function play()
+class ClientGameLoop extends GameLoop
 {
-	requestAnimFrame( frame );
-}
-
-var now,
-	dt,
-	last = Util.timestamp();
-
-function frame()
-{
-	now = Util.timestamp();
-	dt = ( now - last ) / 1000; // In seconds
-
-	if ( map )
+	constructor( game_functions )
 	{
-		update( dt );
-		render( dt );
+		super( game_functions );
+
+		// GameState.onplay = this.start.bind( this );
+		// GameState.addEventListener( 'play', this.start.bind( this ) );
+		// GameState.addEventListener( 'disconnect', this.pause.bind( this ) );
 	}
-
-	last = now;
-	requestAnimFrame( frame );
 }
 
-function update( dt )
-{
-	game.update( dt );
+let game_loop = new GameLoop( Game.update.bind( Game ),
+	Connect.send_state_queue.bind( Connect ),
+	Render.draw.bind( Render, Game.game_map )
+);
 
-	// Send event data to the server
-	connect.sendStateQueue();
-}
+// GameState.onplay = game_loop.start.bind( game_loop );
+// GameState.ondisconnect = function ()
+// {
+// 	this.pause.bind( this );
+// 	UI.switch_to_menu_UI();
+// 	console.log( '1' );
+// }.bind( this );
 
-function render( dt )
-{
-	renderer.draw( map.tanks, map.bullets, map.mines, map.explosions, map.walls, controller.camera );
-}
+GameState.addEventListener( 'play', game_loop.start.bind( game_loop ) );
+GameState.addEventListener( 'disconnect', game_loop.pause.bind( game_loop ) );
