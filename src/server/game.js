@@ -1,7 +1,7 @@
 import Collision from '../common/collision/collision';
 import Explosion from '../common/entity/explosion';
 import ObjectPool from '../common/util/object_pool';
-import ServerGameMap from '../common/game/game_map';
+import ServerGameMap from './game_map';
 import Game from '../common/game/game';
 
 export default class ServerGame extends Game

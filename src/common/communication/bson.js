@@ -324,7 +324,7 @@ function _encode( value, top )
 export default class BSON
 {
 
-	encode( value )
+	static encode( value )
 	{
 
 		bitsLeft = 8;
@@ -344,7 +344,7 @@ export default class BSON
 		return bitStream;
 	}
 
-	decode( string )
+	static decode( string )
 	{
 
 		var stack = [],

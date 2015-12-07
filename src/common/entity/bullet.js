@@ -4,7 +4,7 @@ const MAX_BOUNCES = 1;
 
 export default class Bullet extends Entity
 {
-	constructor( x = 0, y = 0, angle = 0, speed = -3, owner )
+	constructor( x = 0, y = 0, angle = 0, speed = 3, owner )
 	{
 		super( x, y, 5, 2.5, angle );
 

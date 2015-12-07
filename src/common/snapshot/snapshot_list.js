@@ -32,7 +32,7 @@ export default class SnapshotList extends LinkedList
 
 		while ( currSnapshot )
 		{
-			difference = Math.abs( currSnapshot[ timeType ] - time );
+			let difference = Math.abs( currSnapshot[ timeType ] - time );
 
 			if ( difference === 0 )
 				return currSnapshot;

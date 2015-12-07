@@ -12,8 +12,8 @@ export default class Tank extends Entity
 		this.name = 'Tanky';
 		this.score = 0;
 		this.last_bullet_tick = 0;
-		this.mines = [];
-		this.bullets = [];
+		this.mines = new Map();
+		this.bullets = new Map();
 		this.barrel = new Entity( x, y, 50, 5, 0, -0.5, 0 );
 		this.barrel_angle = 0;
 	}
@@ -21,7 +21,6 @@ export default class Tank extends Entity
 	move( x, y )
 	{
 		super.move( x, y );
-		this.barrel.move( x, y );
 	}
 
 	move_to( x, y )
@@ -70,40 +69,6 @@ export default class Tank extends Entity
 	{
 		var tangentialVelocity = this.radius * this.angular_velocity;
 		this.move( tangentialVelocity * edgeUnitVector.x, tangentialVelocity * edgeUnitVector.y );
-	}
-
-	// Fire a projectile from the end of barrel and return the reference
-	shoot()
-	{
-		this.barrel.rotateBoundingBox();
-
-		// Set the projectile starting position to the middle of the barrel tip
-		var projectilePos = new Vector( this.barrel.boundingBox[ 2 ].x, this.barrel.boundingBox[ 2 ].y );
-		// projectilePos.add( -this.barrel.boundingBox[ 2 ].x, -this.barrel.boundingBox[ 2 ].y );
-		// projectilePos.divide( 2 );
-		// projectilePos.add( this.barrel.boundingBox[ 3 ].x, this.barrel.boundingBox[ 3 ].y );
-
-		var projectile = new Projectile( this.id, projectilePos.x, projectilePos.y, this.barrel.angle );
-		this.projectiles.push( projectile );
-
-		return projectile;
-	}
-
-	// Returns true if there is a collision between this tank and a tank from players
-	isPlayerCollision( player )
-	{
-		// Don't check this tank with itself
-		if ( player.id === this.id )
-		{
-			return;
-		}
-
-		// Return if a collision is found
-		var edgeUnitVector = this.isRotatedRectangleCollision( player );
-		if ( edgeUnitVector )
-		{
-			return edgeUnitVector;
-		}
 	}
 
 	reset()

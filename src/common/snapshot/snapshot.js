@@ -6,7 +6,8 @@ export default class Snapshot extends LinkedListNode
 	{
 		super( prev, next );
 
-		this.timestamp = Date.now();
+		this.tick = data.tk;
+		this.timestamp = data.ti;
 		this.data = data;
 	}
 }

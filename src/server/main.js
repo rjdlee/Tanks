@@ -1,3 +1,4 @@
+import BSON from '../common/communication/bson';
 import Game from '../common/game/game';
 import ServerGameMap from './game_map';
 import GameLoop from '../common/game/game_loop';
@@ -14,11 +15,19 @@ export default class Connect
 		this.loop = new GameLoop( Game.update.bind( Game ), this.render.bind( this, io ) );
 		this.loop.start();
 
+		// Rewind snapshots on a separate map
+		// this.snapshot_map = new ServerGameMap();
+
+		// Last snapshot sent to the clients
+		this.previous_snapshot;
+
 		io.on( 'connection', this.connect_handler.bind( this ) );
 	}
 
 	render( io )
 	{
+		Game.game_map.saveSnapshot();
+
 		if ( Game.game_map.tick % 60 === 0 )
 		{
 			if ( !Game.game_map.isReplayingSnapshot )
@@ -26,10 +35,16 @@ export default class Connect
 				Game.game_map.saveSnapshot();
 			}
 
-			var stateChange = Game.game_map.diffSnapshot( Game.game_map.snapshots.head, Game.game_map.snapshots.head.prev );
+			var stateChange = Game.game_map.diffSnapshot( Game.game_map.snapshots.head, this.previous_snapshot );
+			this.previous_snapshot = Game.game_map.snapshots.head;
 
-			if ( Object.keys( stateChange ).length > 0 )
-				io.sockets.emit( 'e', stateChange );
+			if ( Object.keys( stateChange ).length === 0 )
+			{
+				return;
+			}
+			// console.log( stateChange );
+
+			io.sockets.emit( 'e', BSON.encode( stateChange ) );
 		}
 	}
 
@@ -62,10 +77,10 @@ export default class Connect
 	{
 		var id = this.id;
 
-		// If the player was on the leaderboard, remove them from it
+		// If the tank was on the leaderboard, remove them from it
 		Game.game_map.score.remove( id )
 
-		// Remove the player from the map
+		// Remove the tank from the map
 		Game.game_map.remove_tank( id );
 
 		console.log( id + ' disconnected.' );
@@ -73,31 +88,37 @@ export default class Connect
 
 	event_handler( e )
 	{
-		var id = this.id,
-			player = map.players[ id ];
+		e = BSON.decode( e );
+		let id = this.id;
+		let game_map = Game.game_map;
+		let tank = game_map.tanks.get( id );
 
-		if ( !player )
+		if ( !tank )
+		{
 			return;
+		}
 
 		if ( !e.t )
+		{
 			return;
+		}
 
-		map.loadSnapshot( e.t );
+		game_map.loadSnapshot( e.t );
 
 		// Forwards and backwards velocity
 		if ( 'v' in e )
 		{
 			if ( e.v > 0 )
 			{
-				player.setVelocity( 1.5 );
+				tank.set_speed( 1.5 );
 			}
 			else if ( e.v === 0 )
 			{
-				player.setVelocity( 0 );
+				tank.set_speed( 0 );
 			}
 			else if ( e.v < 0 )
 			{
-				player.setVelocity( -1.5 );
+				tank.set_speed( -1.5 );
 			}
 		}
 
@@ -106,34 +127,31 @@ export default class Connect
 		{
 			if ( e.r > 0 )
 			{
-				player.rotation.speed = 0.05;
+				tank.set_turn_speed( 0.05 );
 			}
 			else if ( e.r === 0 )
 			{
-				player.rotation.speed = 0;
+				tank.set_turn_speed( 0 );
 			}
 			else if ( e.r < 0 )
 			{
-				player.rotation.speed = -0.05;
+				tank.set_turn_speed( -0.05 );
 			}
 		}
 
 		// Mouse movement
 		if ( 'm' in e )
 		{
-			player.barrel.setAngle( e.m );
-			playerLog.heading = e.m;
+			tank.turn_barrel_to( e.m );
 		}
 
-		if ( 's' in e )
+		if ( 'c' in e )
 		{
-			var projectile = player.shoot();
-			if ( projectile )
-			{
-				map.projectiles[ projectile.id ] = projectile;
-			}
+			let barrel_tip = tank.barrel.bounding_box.vertices[ 2 ];
+			let barrel_angle = tank.barrel.angle;
+			game_map.spawn_bullet( null, barrel_tip.x, barrel_tip.y, barrel_angle, id );
 		}
 
-		map.replaySnapshot();
+		game_map.replaySnapshot();
 	}
 }

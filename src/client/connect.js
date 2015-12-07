@@ -10,12 +10,15 @@ Right	3			7
 
 */
 
+import BSON from '../common/communication/bson';
 import Controller from './ui/controller';
-import UI from './ui/ui';
 import Event from '../common/state/event';
 import Game from '../common/game/game';
-import GameState from '../common/state/state';
 import GameMapState from '../common/game/game_map_state';
+import GameState from '../common/state/state';
+import UI from './ui/ui';
+import Util from '../common/util/util';
+import Vector from '../common/util/vector';
 
 const local_server_URI = 'http://localhost:3000';
 const remote_server_URI = 'http://tankti.me:3000';
@@ -27,21 +30,18 @@ class Connect_Class
 		// Events to be sent to server
 		this.state_queue = new Map();
 
-		// Time when events are sent to server
-		this.state_time = new Date();
-
 		this.socket = io( local_server_URI );
 		this.socket.on( 'connect', this.connect_handler.bind( this ) );
 		this.socket.on( 'connect_error', this.connect_error_handler.bind( this ) );
 
-		Event.subscribe( 'controller_aim', this.pushStateEvent.bind( this, 'm', 1 ) );
-		Event.subscribe( 'controller_shoot', this.pushStateEvent.bind( this, 's' ), 1 );
-		Event.subscribe( 'controller_up', this.pushStateEvent.bind( this, 'u' ) );
-		Event.subscribe( 'controller_down', this.pushStateEvent.bind( this, 'd' ) );
-		Event.subscribe( 'controller_left', this.pushStateEvent.bind( this, 'l' ) );
-		Event.subscribe( 'controller_right', this.pushStateEvent.bind( this, 'r' ) );
-		Event.subscribe( 'controller_no_move', this.pushStateEvent.bind( this, 'm' ) );
-		Event.subscribe( 'controller_no_turn', this.pushStateEvent.bind( this, 't' ) );
+		Event.subscribe( 'controller_aim', this.pushStateEvent.bind( this, 'm' ) );
+		Event.subscribe( 'controller_shoot', this.pushStateEvent.bind( this, 'c' ) );
+		Event.subscribe( 'controller_up', this.pushStateEvent.bind( this, 'v', -1 ) );
+		Event.subscribe( 'controller_down', this.pushStateEvent.bind( this, 'v', 1 ) );
+		Event.subscribe( 'controller_no_move', this.pushStateEvent.bind( this, 'v', 0 ) );
+		Event.subscribe( 'controller_left', this.pushStateEvent.bind( this, 'r', 1 ) );
+		Event.subscribe( 'controller_right', this.pushStateEvent.bind( this, 'r', -1 ) );
+		Event.subscribe( 'controller_no_turn', this.pushStateEvent.bind( this, 'r', 0 ) );
 
 		GameState.onload = this.sync_handler.bind( this );
 		GameState.onterminate = this.close_socket.bind( this );
@@ -50,19 +50,28 @@ class Connect_Class
 	// Add an event to the queue to be sent to the server
 	pushStateEvent( key, data )
 	{
-		console.log( key, data );
 		this.state_queue.set( key, data );
 	}
 
 	// Send the queue of events to the server
 	send_state_queue()
 	{
-		if ( Object.keys( this.state_queue ).length === 0 )
-			return false;
+		if ( this.state_queue.size === 0 )
+			return;
 
-		this.state_time = Date.now();
-		this.socket.emit( 'e', this.state_queue );
+		if ( !GameState.is( 'playing' ) )
+			return;
 
+		// Convert this damn thing to an object
+		let state_queue_object = {
+			t: String( Util.timestamp() )
+		};
+		for ( let [ key, data ] of this.state_queue.entries() )
+		{
+			state_queue_object[ key ] = data;
+		}
+
+		this.socket.emit( 'e', BSON.encode( state_queue_object ) );
 		this.state_queue.clear();
 	};
 
@@ -120,85 +129,93 @@ class Connect_Class
 	disconnect_handler()
 	{
 		GameState.disconnect();
+		console.log( GameState.current );
 	}
 
 	event_handler( data )
 	{
-		if ( !Game.game_map )
+		let game_map = Game.game_map;
+
+		if ( !game_map )
 			return;
 
-		if ( !Game.controller )
+		if ( !game_map.controller )
 			return;
 
-		for ( var id in data.tanks )
+		data = BSON.decode( data );
+
+		for ( var id in data.t )
 		{
-			var tank = data.tanks[ id ];
+			var tank = data.t[ id ];
 
 			if ( tank === 'remove' )
 			{
-				game_map.removeTank( id );
+				game_map.remove_tank( id );
 				continue;
 			}
 
 			if ( 'add' in tank )
 			{
-				var tankData = tank.add,
-					tank;
+				let tankData = tank.add;
 
 				if ( id === this.socket.id )
 				{
-					Game.controller.setPos( tankData.pos.x, tankData.pos.y );
-					Game.controller.camera.moveTo( tankData.pos.x, tankData.pos.y, game_map.width, game_map.height );
-
 					continue;
 				}
 
-				game_map.tanks[ id ] = tank = new Tank( id, tankData.pos.x, tankData.pos.y, tankData.angle );
-				tank.setVelocity( tankData.speed );
-				tank.barrel.setAngle( tankData.heading );
+				let tank_instance = game_map.spawn_tank( id, tankData.x, tankData.y, tankData.a );
+				tank_instance.set_speed( tankData.s );
+				tank_instance.turn_barrel_to( tankData.f );
 
 				continue;
 			}
 
-			if ( 'pos' in tank )
+			if ( 'x' in tank )
 			{
-				var pos = new Vector( tank.pos.x, tank.pos.y ),
-					mapTank = game_map.tanks[ id ];
-
-				mapTank.next_pos = pos.diff( mapTank.pos );
-				// game_map.tanks.get(id).setPos( tank.pos.x, tank.pos.y );
+				let tank_instance = game_map.tanks.get( id );
+				tank_instance.next_pos.x = tank.x - tank_instance.pos.x;
 			}
 
-			if ( 'angle' in tank )
+			if ( 'y' in tank )
 			{
-				game_map.tanks.get( id ).setAngle( tank.angle );
-				// game_map.tanks.get(id).angle.nextRad = game_map.tanks.get(id).angle.rad - tank.angle;
+				let tank_instance = game_map.tanks.get( id );
+				tank_instance.next_pos.y = tank.y - tank_instance.pos.y;
 			}
 
-			if ( 'facing' in tank )
-				game_map.tanks.get( id ).barrel.setAngle( tank.facing );
+			if ( 'a' in tank )
+			{
+				let tank_instance = game_map.tanks.get( id );
+				tank_instance.turn_to( tank.a );
+			}
 
-			if ( 'speed' in tank )
-				game_map.tanks.get( id ).setVelocity( tank.speed );
+			if ( 'f' in tank )
+			{
+				let tank_instance = game_map.tanks.get( id );
+				tank_instance.turn_barrel_to( tank.f );
+			}
+
+			if ( 's' in tank )
+			{
+				let tank_instance = game_map.tanks.get( id );
+				tank_instance.set_speed( tank.s );
+			}
 		}
-		// if ( data.bullets )
-		// console.log( data.bullets );
-		for ( var id in data.bullets )
+
+		for ( var id in data.b )
 		{
-			var bullet = data.bullets[ id ];
+			var bullet = data.b[ id ];
 
 			if ( bullet === 'remove' )
 			{
-				game_map.removeBullet( id );
-
+				game_map.remove_bullet( id );
 				continue;
 			}
 
 			if ( 'add' in bullet )
 			{
 				var bulletData = bullet.add;
-				game_map.bullets[ id ] = new Bullet(
-					bulletData.pid, bulletData.pos.x, bulletData.pos.y, bulletData.angle, bulletData.speed );
+				game_map.spawn_bullet( id, bulletData.x, bulletData.y, bulletData.a, bulletData.o );
+				console.log( game_map.bullets.get( id ) );
 			}
 
 		}

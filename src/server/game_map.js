@@ -1,36 +1,35 @@
-import Vector from '../common/util/vector';
+import GameMap from '../common/game/game_map';
+import Collision from '../common/collision/collision';
+import GameMapState from '../common/game/game_map_state';
 import Noise from '../common/util/noise';
-import LinkedListNode from '../common/util/linked_list_node';
+import Score from '../common/game/score';
 import Snapshot from '../common/snapshot/snapshot';
 import SnapshotList from '../common/snapshot/snapshot_list';
-import GameMap from '../common/game/game_map';
-import GameMapState from '../common/game/game_map_state';
 import Tank from '../common/entity/tank';
-import Wall from '../common/entity/wall';
-import Collision from '../common/collision/collision';
+import Vector from '../common/util/vector';
 
-const MAP_WIDTH = 3000;
-const MAP_HEIGHT = 2000;
 const SNAPSHOT_LIMIT = 100;
 const SNAPSHOT_DELAY = 3;
 
 export default class ServerGameMap extends GameMap
 {
-	constructor( width = MAP_WIDTH, height = MAP_HEIGHT )
+	constructor( width, height )
 	{
 		super( width, height );
 
-		this.generateWalls();
+		this.score = new Score();
 		this.snapshots = new SnapshotList();
+		this.isReplayingSnapshot;
+
+		this.generateWalls();
 		this.saveSnapshot();
 	}
 
 	// Save a snapshot for the current tick and timestamp
 	saveSnapshot()
 	{
-		let snapshot_data = GameMapState.encode( this );
-		let snapshot_node = new LinkedListNode( snapshot_data );
-		this.snapshots.unshift( snapshot_node );
+		let data = GameMapState.encode( this );
+		this.snapshots.unshift( new Snapshot( data ) );
 	}
 
 	// Load a snapshot for the given timestamp
@@ -38,9 +37,14 @@ export default class ServerGameMap extends GameMap
 	{
 		var snapshot = this.snapshots.getByTime( timestamp );
 		if ( !snapshot )
+		{
 			return;
+		}
 
 		GameMapState.decode( snapshot.data, this );
+
+		this.tick = snapshot.tick;
+		this.timestamp = snapshot.timestamp;
 		this.snapshot = snapshot;
 	}
 
@@ -61,7 +65,7 @@ export default class ServerGameMap extends GameMap
 				for ( var id in this.tanks )
 				{
 					if ( !( id in snapshot.tanks ) )
-						delete this.tanks.get( id );
+						delete this.tanks[ id ];
 				}
 
 				for ( var id in snapshot.tanks )
@@ -69,24 +73,24 @@ export default class ServerGameMap extends GameMap
 					if ( id in this.tanks )
 						continue;
 
-					var tank = snapshot.tanks.get( id );
-					this.tanks[ tank.id ] = new tank( tank.id, tank.pos.x, tank.pos.y, tank.angle );
+					var tank = snapshot.tanks[ id ];
+					this.tanks[ tank.id ] = new Tank( tank.id, tank.pos.x, tank.pos.y, tank.angle );
 					this.tanks[ tank.id ].barrel.setAngle( tank.facing );
 				}
 
-				for ( var id in this.bullets )
+				for ( var id in this.projectiles )
 				{
-					if ( !( id in snapshot.bullets ) )
-						delete this.bullets.set( id );
+					if ( !( id in snapshot.projectiles ) )
+						delete this.projectiles[ id ];
 				}
 
-				for ( var id in snapshot.bullets )
+				for ( var id in snapshot.projectiles )
 				{
-					if ( id in this.bullets )
+					if ( id in this.projectiles )
 						continue;
 
-					var bullet = snapshot.bullets.set( id );
-					this.bullets[ bullet.id ] = new bullet( bullet.pid, bullet.pos.x, bullet.pos.y, bullet.angle, bullet.speed );
+					var projectile = snapshot.projectiles[ id ];
+					this.projectiles[ projectile.id ] = new Projectile( projectile.pid, projectile.pos.x, projectile.pos.y, projectile.angle, projectile.speed );
 				}
 
 				for ( var id in this.walls )
@@ -116,28 +120,22 @@ export default class ServerGameMap extends GameMap
 
 	diffSnapshot( snapshot, prevSnapshot )
 	{
-		var diff = {},
-			tanks,
-			bullets,
-			walls;
+		let diff = {};
 
 		if ( !prevSnapshot )
-			return snapshot.data;
-
-		tanks = diffObjects( snapshot.t, prevSnapshot.t );
-		bullets = diffObjects( snapshot.b, prevSnapshot.b );
-		walls = diffObjects( snapshot.w, prevSnapshot.w );
-
-		if ( Object.keys( tanks ).length > 0 )
 		{
-			diff.tanks = tanks;
+			return snapshot.data;
 		}
 
-		if ( Object.keys( bullets ).length > 0 )
-			diff.bullets = bullets;
+		for ( let data_key in snapshot.data )
+		{
+			let data_diff = diffObjects( snapshot.data[ data_key ], prevSnapshot.data[ data_key ] );
 
-		if ( Object.keys( walls ).length > 0 )
-			diff.walls = walls;
+			if ( Object.keys( data_diff ).length > 0 )
+			{
+				diff[ data_key ] = data_diff;
+			}
+		}
 
 		return diff;
 
@@ -150,16 +148,16 @@ export default class ServerGameMap extends GameMap
 				var object = objects[ id ],
 					idDiff = {};
 
+				// Object is not in previous
 				if ( !( id in prevObjects ) )
 				{
 					diff[ id ] = {};
 					diff[ id ].add = JSON.parse( JSON.stringify( object ) );
-					console.log( diff[ id ] );
 					continue;
 				}
 
+				// Convert objects to JSON and do string comparison
 				var prevObject = prevObjects[ id ];
-
 				for ( var property in object )
 				{
 					if ( object.hasOwnProperty( property ) )
@@ -176,10 +174,9 @@ export default class ServerGameMap extends GameMap
 					else
 						diff[ id ] = idDiff;
 				}
-
-				// console.log( id, objects[ id ], prevObjects[ id ], idDiff );
 			}
 
+			// Object is in previous, but not current
 			for ( var id in prevObjects )
 			{
 				if ( !( id in objects ) )
@@ -191,6 +188,129 @@ export default class ServerGameMap extends GameMap
 			return diff;
 		}
 	}
+
+	// update()
+	// {
+	// 	// Draw the tanks
+	// 	for ( var i in this.tanks )
+	// 	{
+	// 		var tank = this.tanks[ i ];
+	// 		tank.rotate();
+
+	// 		for ( var id in this.walls )
+	// 		{
+	// 			var wall = this.walls[ id ];
+	// 			collision = tank.isRectangleCollision( wall );
+
+	// 			if ( collision )
+	// 			{
+	// 				tank.rotateAlongWall( collision[ 0 ], collision[ 1 ] );
+	// 				continue;
+	// 			}
+	// 		}
+
+	// 		for ( var id in this.tanks )
+	// 		{
+	// 			if ( id === i )
+	// 				continue;
+
+	// 			var idTank = this.tanks[ id ];
+	// 			collision = tank.isTankCollision( idTank );
+
+	// 			if ( collision )
+	// 			{
+	// 				var edgeUnitVector = collision;
+	// 				tank.rotateAlongTank( collision );
+	// 			}
+	// 		}
+
+	// 		if ( !tank.velocity.isZero() )
+	// 		{
+	// 			var velocityAfterCollision = tank.velocity.clone();
+	// 			for ( var id in this.walls )
+	// 			{
+	// 				var wall = this.walls[ id ];
+	// 				collision = tank.isRectangleCollision( wall );
+
+	// 				if ( collision )
+	// 				{
+	// 					var edgeUnitVector = collision[ 0 ];
+	// 					velocityAfterCollision.project( edgeUnitVector );
+	// 				}
+	// 			}
+
+	// 			for ( var id in this.tanks )
+	// 			{
+	// 				if ( id === i )
+	// 					continue;
+
+	// 				var idTank = this.tanks[ id ];
+	// 				collision = tank.isTankCollision( idTank );
+
+	// 				if ( collision )
+	// 				{
+	// 					var edgeUnitVector = collision;
+	// 					velocityAfterCollision.project( edgeUnitVector );
+	// 				}
+	// 			}
+
+	// 			tank.movePos( velocityAfterCollision.x, velocityAfterCollision.y );
+	// 		}
+	// 	}
+
+	// 	// Draw projectiles and check for collisions
+	// 	for ( var i in this.projectiles )
+	// 	{
+	// 		var projectile = this.projectiles[ i ];
+
+	// 		// Move with either the same velocity or a reversed velocity from colliding
+	// 		projectile.translate();
+
+	// 		// Check for a collision with map boundaries or walls
+	// 		for ( var id in this.walls )
+	// 		{
+	// 			var wall = this.walls[ id ];
+	// 			collision = projectile.isRectangleCollision( wall );
+
+	// 			if ( collision )
+	// 			{
+	// 				projectile.move( -projectile.velocity.x, -projectile.velocity.y );
+	// 				if ( !projectile.bounce( collision[ 0 ] ) )
+	// 					this.removeProjectile( i );
+
+	// 				projectile.move( projectile.velocity.x, projectile.velocity.y );
+	// 			}
+	// 		}
+
+	// 		for ( var id in this.projectiles )
+	// 		{
+	// 			if ( id === i )
+	// 				continue;
+
+	// 			var idProjectile = this.projectiles[ id ];
+
+	// 			collision = projectile.isRotatedRectangleCollision( idProjectile );
+
+	// 			if ( collision )
+	// 			{
+	// 				this.removeProjectile( i );
+	// 				this.removeProjectile( id );
+	// 			}
+	// 		}
+
+	// 		// Bullet collide with tanks
+	// 		for ( var id in this.tanks )
+	// 		{
+	// 			if ( projectile.isRotatedRectangleCollision( this.tanks[ id ] ) )
+	// 			{
+	// 				this.removeProjectile( projectile.id );
+	// 				this.kill( id, projectile.pid );
+	// 			}
+	// 		}
+	// 	}
+
+	// 	this.tick++;
+	// }
 
 	kill( victimID, murdererID )
 	{
@@ -212,20 +332,20 @@ export default class ServerGameMap extends GameMap
 		// stateQueue[ aid ] = assailantLog;
 	}
 
-	randomly_spawn_tank( tank_id )
+	randomly_spawn_tank( tankID )
 	{
 		var tank,
 			tries = 0;
 
-		if ( !tank_id )
+		if ( !tankID )
 			return;
 
-		if ( tank_id instanceof Tank )
-			tank = tank_id;
+		if ( tankID instanceof Tank )
+			tank = tankID;
 		else
-			tank = this.spawn_tank( tank_id );
+			tank = this.spawn_tank( tankID, 0, 0 );
 
-		tryLoop: while ( tries < 100 )
+		spawn_loop: while ( tries < 100 )
 		{
 			tries++;
 
@@ -236,34 +356,31 @@ export default class ServerGameMap extends GameMap
 			pos.multiply( 50 );
 
 			// Used for collision detection
-			var pos_entity = {
+			let pos_object = {
 				pos: pos
 			};
 
 			// Check for collisions with tanks
-			for ( let [ id, tank ] in this.tanks )
+			for ( let [ other_id, other_tank ] of this.tanks )
 			{
-				if ( Collision.is_near( tank, pos_entity, 100 ) )
-					continue tryLoop;
+				if ( Collision.is_near( other_tank, pos_object ) )
+				{
+					continue spawn_loop;
+				}
 			}
 
-			// Check for collisions with bullets
-			for ( let [ id, bullet ] in this.bullets )
+			// Check for collisions with projectiles
+			for ( let [ other_id, other_bullet ] in this.bullets )
 			{
-				if ( Collision.is_near( bullet, pos_entity, 70 ) )
-					continue tryLoop;
-			}
-
-			// Check for collisions with bullets
-			for ( let [ id, mine ] of this.mines )
-			{
-				if ( Collision.is_near( mine, pos_entity, 70 ) )
-					continue tryLoop;
+				if ( Collision.is_near( other_bullet, pos_object ) )
+				{
+					continue spawn_loop;
+				}
 			}
 
 			// Apply the collision free position to the tank
 			tank.move_to( pos.x, pos.y );
-			break tryLoop;
+			break spawn_loop;
 		}
 
 		return tank;
@@ -271,20 +388,18 @@ export default class ServerGameMap extends GameMap
 
 	generateWalls()
 	{
-		var gridSize = 50,
-			gridWidth = Math.floor( this.width / gridSize ),
-			gridHeight = Math.floor( this.height / gridSize ),
-			grid = [],
-			emptyTiles = [],
-			wallTiles = [],
-			walls = [],
+		let gridSize = 50;
+		let gridWidth = Math.floor( this.width / gridSize );
+		let gridHeight = Math.floor( this.height / gridSize );
+		let grid = [];
+		let emptyTiles = [];
+		let wallTiles = [];
+		let walls = [];
+		let threshold = 0;
 
-			threshold = 0;
-
-		// Seed the noise simplex with a random number to give a different map each time
+		// Seed the Noise simplex with a random number to give a different map each time
 		Noise.seed( Math.random() );
 
-		// Populate the grid with walls using simplex noise when values are above a threshold
 		for ( var y = 0; y < gridHeight; y++ )
 		{
 			var row = new Array( gridWidth );
@@ -304,6 +419,7 @@ export default class ServerGameMap extends GameMap
 					threshold = 0;
 				}
 
+				// Wall tile if random value is greater than threshold
 				if ( Noise.simplex2( x, y ) > threshold )
 				{
 					row[ x ] = 1;
@@ -311,10 +427,9 @@ export default class ServerGameMap extends GameMap
 
 					wallTiles.push( new Vector( x, y ) );
 
+					// Increase threshold if next to another wall
 					if ( y > 0 && grid[ y - 1 ][ x ] )
-					{
 						threshold = 0.6;
-					}
 
 					continue;
 				}
@@ -355,90 +470,106 @@ export default class ServerGameMap extends GameMap
 		// w w -         1 1 -
 		// - w -   -->   - 2 -
 		// - - -         - - -
-		for ( var i = wallTiles.length - 1; i >= 0; i-- )
+		for ( let i = wallTiles.length - 1; i >= 0; i-- )
 		{
-			var tile = wallTiles[ i ],
-				wall = [
+			let tile = wallTiles[ i ];
+			let wall = {
+				lower_bound:
 				{
 					x: tile.x,
 					y: tile.y
 				},
+				upper_bound:
 				{
 					x: tile.x,
 					y: tile.y
-				} ],
-				vertical = false;
+				}
+			};
+			let vertical = false;
 
 			// Skip over wall tiles already assigned to another wall
 			if ( grid[ tile.y ][ tile.x ] !== 1 )
 				continue;
 
-			walls.push( wall );
 			grid[ tile.y ][ tile.x ] = 2;
 
-			for ( var direction = -1; direction < 2; direction += 2 )
+			// Create a vertical wall
+			for ( var offset = -1; offset < 2; offset += 2 )
 			{
-				var offset = direction;
+				let cumulative_offset = offset;
+				let pos_x = tile.x;
+				let pos_y = tile.y + cumulative_offset;
+				let current_tile = grid[ pos_y ][ pos_x ];
 
-				while ( true )
+				while ( current_tile > 0 )
 				{
-					if ( grid[ tile.y + offset ][ tile.x ] )
+					if ( offset === -1 )
 					{
-						if ( direction === -1 )
-							wall[ 0 ].y += direction;
-						else
-							wall[ 1 ].y += direction;
-
-						grid[ tile.y + offset ][ tile.x ] = 2;
-						offset += direction;
-						vertical = true;
+						wall.lower_bound.y += offset;
 					}
 					else
 					{
-						break;
+						wall.upper_bound.y += offset;
 					}
+
+					grid[ pos_y ][ pos_x ] = 2;
+					vertical = true;
+
+					cumulative_offset += offset;
+					pos_y = tile.y + cumulative_offset;
+					current_tile = grid[ pos_y ][ pos_x ];
 				}
 			}
 
 			if ( vertical )
-				continue;
-
-			for ( var direction = -1; direction < 2; direction += 2 )
 			{
-				var offset = direction;
+				walls.push( wall );
+				continue;
+			}
 
-				while ( true )
+			// Create a horizontal wall if no vertical wall was created
+			for ( var offset = -1; offset < 2; offset += 2 )
+			{
+				let cumulative_offset = offset;
+				let pos_x = tile.x + cumulative_offset;
+				let pos_y = tile.y;
+				let current_tile = grid[ pos_y ][ pos_x ];
+
+				while ( current_tile > 0 )
 				{
-					if ( grid[ tile.y ][ tile.x + offset ] )
+					if ( offset === -1 )
 					{
-						if ( direction === -1 )
-							wall[ 0 ].x += direction;
-						else
-							wall[ 1 ].x += direction;
-
-						grid[ tile.y ][ tile.x + offset ] = 2;
-						offset += direction;
+						wall.lower_bound.x += offset;
 					}
 					else
 					{
-						break;
+						wall.upper_bound.x += offset;
 					}
+
+					grid[ pos_y ][ pos_x ] = 2;
+					vertical = true;
+
+					cumulative_offset += offset;
+					pos_x = tile.x + cumulative_offset;
+					current_tile = grid[ pos_y ][ pos_x ];
 				}
 			}
+
+			walls.push( wall );
 		}
 
 		// Create actual wall objects from the generated wall grid
 		for ( var i = walls.length - 1; i >= 0; i-- )
 		{
-			var wall = walls[ i ],
-				wallWidth = ( wall[ 1 ].x - wall[ 0 ].x + 1 ) * 50,
-				wallHeight = ( wall[ 1 ].y - wall[ 0 ].y + 1 ) * 50,
+			var wall = walls[ i ];
+			let wallWidth = ( wall.upper_bound.x - wall.lower_bound.x + 1 ) * 50;
+			let wallHeight = ( wall.upper_bound.y - wall.lower_bound.y + 1 ) * 50;
 
-				// Rectangles are instantiated with their center's position
-				centerPosX = wall[ 0 ].x * 50 + wallWidth / 2,
-				centerPosY = wall[ 0 ].y * 50 + wallHeight / 2;
+			// Rectangles are instantiated with their center's position
+			let centerPosX = wall.lower_bound.x * 50 + wallWidth / 2;
+			let centerPosY = wall.lower_bound.y * 50 + wallHeight / 2;
 
-			walls[ i ] = new Wall( centerPosX, centerPosY, wallWidth, wallHeight );
+			this.spawn_wall( null, centerPosX, centerPosY, wallWidth, wallHeight );
 		}
 
 		// Generate walls for the borders of the map
@@ -450,12 +581,12 @@ export default class ServerGameMap extends GameMap
 			halfTile = gridSize >> 1;
 
 		// Horizontal wall borders
-		walls.push( new Wall( halfWidth, halfTile, this.width, gridSize ) );
-		walls.push( new Wall( halfWidth, this.height - halfTile, this.width, gridSize ) );
+		this.spawn_wall( null, halfWidth, halfTile, this.width, gridSize );
+		this.spawn_wall( null, halfWidth, this.height - halfTile, this.width, gridSize );
 
 		// Vertical (left and right) wall borders
-		walls.push( new Wall( halfTile, halfHeight, gridSize, this.height ) );
-		walls.push( new Wall( this.width - halfTile, halfHeight, gridSize, this.height ) );
+		this.spawn_wall( null, halfTile, halfHeight, gridSize, this.height );
+		this.spawn_wall( null, this.width - halfTile, halfHeight, gridSize, this.height );
 
 		// Populate empty tiles with all the grid tiles without a wall
 		for ( var y = 1; y < gridHeight - 1; y++ )
@@ -469,13 +600,15 @@ export default class ServerGameMap extends GameMap
 			}
 		}
 
-		for ( let wall of walls )
-		{
-			this.walls.set( wall.id, wall );
-		}
-
 		this.grid = grid;
 		this.emptyTiles = emptyTiles;
 		this.wallTiles = wallTiles;
 	}
+}
+
+// Extract a digit from a random seed ( Ex. Seed: 153 & Digit: 2 -> Return: 5 )
+function getSeedDigit( seed, digit )
+{
+	digit = Math.pow( 10, digit );
+	return Math.round( ( seed * digit ) % 10 );
 }

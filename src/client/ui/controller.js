@@ -42,6 +42,11 @@ export default class Controller
 
 	keyDownListener( key )
 	{
+		if ( this.key[ key ] )
+		{
+			return;
+		}
+
 		if ( key === 'up' )
 		{
 			this.key.up = true;
@@ -93,7 +98,7 @@ export default class Controller
 			else
 			{
 				this.player.set_speed( 0 );
-				Event.publish( 'controller_no_speed' );
+				Event.publish( 'controller_no_move' );
 			}
 		}
 		else if ( key === 'down' )
@@ -107,7 +112,7 @@ export default class Controller
 			else
 			{
 				this.player.set_speed( 0 );
-				Event.publish( 'controller_no_speed' );
+				Event.publish( 'controller_no_move' );
 			}
 		}
 		else if ( key === 'left' )
@@ -121,7 +126,7 @@ export default class Controller
 			else
 			{
 				this.player.set_turn_speed( 0 );
-				Event.publish( 'controller_no_turn_speed' );
+				Event.publish( 'controller_no_turn' );
 			}
 		}
 		else if ( key === 'right' )
@@ -135,7 +140,7 @@ export default class Controller
 			else
 			{
 				this.player.set_turn_speed( 0 );
-				Event.publish( 'controller_no_turn_speed' );
+				Event.publish( 'controller_no_turn' );
 			}
 		}
 	}

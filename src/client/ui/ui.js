@@ -80,6 +80,11 @@ class UI_Class
 
 	key_down_handler( e )
 	{
+		if ( !GameState.is( 'playing' ) )
+		{
+			return;
+		}
+
 		if ( this.keys.has( e.keyCode ) )
 		{
 			Event.publish( 'keydown', this.keys.get( e.keyCode ) );
@@ -88,6 +93,11 @@ class UI_Class
 
 	key_up_handler( e )
 	{
+		if ( !GameState.is( 'playing' ) )
+		{
+			return;
+		}
+
 		if ( this.keys.has( e.keyCode ) )
 		{
 			Event.publish( 'keyup', this.keys.get( e.keyCode ) );
@@ -96,12 +106,22 @@ class UI_Class
 
 	mouse_move_handler( e )
 	{
+		if ( !GameState.is( 'playing' ) )
+		{
+			return;
+		}
+
 		this.mouse_pos.set( e.clientX, e.clientY );
 		Event.publish( 'mousemove', this.mouse_pos );
 	}
 
 	mouse_down_handler( e )
 	{
+		if ( !GameState.is( 'playing' ) )
+		{
+			return;
+		}
+
 		Event.publish( 'mousedown' );
 	}
 

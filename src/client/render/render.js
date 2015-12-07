@@ -50,7 +50,6 @@ class Render_Class
 		// Draw the tanks
 		for ( var [ id, tank ] of tanks )
 		{
-			// this.draw_circle( tank.pos.x, tank.pos.y, 20, tank_context );
 			this.draw_polygon( tank.bounding_box.vertices, tank_context );
 		}
 
@@ -74,13 +73,32 @@ class Render_Class
 
 		tank_context.save();
 		tank_context.beginPath();
-		tank_context.fillStyle = '#FFFFFF';
+		tank_context.fillStyle = '#666';
 
 		for ( var [ id, bullet ] of bullets )
+		{
 			this.draw_polygon( bullet.bounding_box.vertices, tank_context );
+		}
 
 		tank_context.fill();
-		tank_context.restore();
+	}
+
+
+	draw_walls( game_map )
+	{
+		let walls = game_map.walls;
+		let wall_context = UI.contexts.get( 'walls' );
+
+		wall_context.save();
+		wall_context.beginPath();
+		wall_context.fillStyle = '#999';
+
+		for ( var [ id, wall ] of walls )
+		{
+			this.draw_polygon( wall.bounding_box.vertices, wall_context );
+		}
+
+		wall_context.fill();
 	}
 
 	draw_mines( mines )
@@ -125,38 +143,38 @@ class Render_Class
 		}
 	}
 
-	draw_walls( game_map )
-	{
-		let walls = game_map.walls;
-		let wall_context = UI.contexts.get( 'walls' );
+	// draw_walls( game_map )
+	// {
+	// 	let walls = game_map.walls;
+	// 	let wall_context = UI.contexts.get( 'walls' );
 
-		for ( let [ id, wall ] of walls )
-		{
-			let pos = wall.bounding_box.vertices[ 2 ];
+	// 	for ( let [ id, wall ] of walls )
+	// 	{
+	// 		let pos = wall.bounding_box.vertices[ 2 ];
 
-			if ( wall.width > wall.height )
-			{
-				for ( var i = 0; i < wall.width; i += 50 )
-				{
-					wall_context.drawImage( wallTexture0, Math.floor( pos.x + i ), Math.floor( pos.y ) );
-				}
-			}
-			else
-			{
-				for ( var i = 0; i < wall.height; i += 50 )
-				{
-					if ( i + 50 < wall.height )
-					{
-						wall_context.drawImage( wallTexture1, Math.floor( pos.x ), Math.floor( pos.y + i ) );
-						continue;
-					}
-					wall_context.drawImage( wallTexture0, Math.floor( pos.x ), Math.floor( pos.y + i ) );
-				}
-			}
-		}
+	// 		if ( wall.width > wall.height )
+	// 		{
+	// 			for ( var i = 0; i < wall.width; i += 50 )
+	// 			{
+	// 				wall_context.drawImage( wallTexture0, Math.floor( pos.x + i ), Math.floor( pos.y ) );
+	// 			}
+	// 		}
+	// 		else
+	// 		{
+	// 			for ( var i = 0; i < wall.height; i += 50 )
+	// 			{
+	// 				if ( i + 50 < wall.height )
+	// 				{
+	// 					wall_context.drawImage( wallTexture1, Math.floor( pos.x ), Math.floor( pos.y + i ) );
+	// 					continue;
+	// 				}
+	// 				wall_context.drawImage( wallTexture0, Math.floor( pos.x ), Math.floor( pos.y + i ) );
+	// 			}
+	// 		}
+	// 	}
 
-		// wall_context.fill();
-	}
+	// 	// wall_context.fill();
+	// }
 
 	move_walls( walls )
 	{
@@ -192,7 +210,7 @@ class Render_Class
 
 	draw_circle( x, y, radius, context )
 	{
-		context.arc( x - this.camera.pos.x, y - this.camera.pos.y, radius, 0, 6.283185, counterClockwise );
+		context.arc( x - this.camera.pos.x, y - this.camera.pos.y, radius, 0, 6.283185, false );
 	}
 
 	// draw_tanks( tanks, camera )

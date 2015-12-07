@@ -191,11 +191,6 @@ class GameMapState_Class
 			entity.move_to( data.x, data.y );
 		}
 
-		if ( typeof data.pid !== 'undefined' )
-		{
-			entity.pid = data.pid;
-		}
-
 		if ( typeof data.o !== 'undefined' )
 		{
 			entity.owner = data.o;

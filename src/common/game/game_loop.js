@@ -14,7 +14,7 @@ export default class GameLoop
 		else
 		{
 			this.clock_function = setTimeout.bind( null, this.frame.bind( this ), FRAMERATE );
-			this.clock_pause_function = clearTimeout.bind( this.clock );
+			this.clock_pause_function = clearTimeout.bind( null, this.clock );
 		}
 
 		this.game_functions = game_functions;
@@ -32,7 +32,7 @@ export default class GameLoop
 
 	frame()
 	{
-		let now = this.timestamp();
+		let now = Util.timestamp();
 
 		// Time (sec) since last frame
 		let dt = ( now - this.last ) / FRAMERATE;
@@ -44,15 +44,5 @@ export default class GameLoop
 		}
 
 		this.clock = this.clock_function();
-	}
-
-	timestamp()
-	{
-		if ( typeof window !== 'undefined' &&
-			typeof window.performance !== 'undefined' &&
-			typeof window.performance.now !== 'undefined' )
-			return window.performance.now();
-
-		return new Date().getTime();
 	}
 }

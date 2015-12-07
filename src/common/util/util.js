@@ -15,6 +15,16 @@ export default class Util
 	{
 		return Object.prototype.toString.call( func ) == '[object Function]';
 	}
+
+	static timestamp()
+	{
+		// if ( typeof window !== 'undefined' &&
+		// 	typeof window.performance !== 'undefined' &&
+		// 	typeof window.performance.now !== 'undefined' )
+		// 	return window.performance.now();
+
+		return new Date().getTime();
+	}
 }
 
 Math.sign = Math.sign || function ( x )

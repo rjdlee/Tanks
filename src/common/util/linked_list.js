@@ -2,6 +2,11 @@ let DEFAULT_NODE_LIMIT = 100;
 
 export default class LinkedList
 {
+	constructor()
+	{
+		this.length = 0;
+	}
+
 	// Return node by array index
 	get( index )
 	{

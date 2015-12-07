@@ -7,9 +7,12 @@ import Tank from '../entity/tank';
 import Vector from '../util/vector';
 import Wall from '../entity/wall';
 
+const DEFAULT_WIDTH = 4000;
+const DEFAULT_HEIGHT = 2000;
+
 export default class GameMap
 {
-	constructor( width, height )
+	constructor( width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT )
 	{
 		this.tick = 0;
 		this.score = new Score();
@@ -38,22 +41,49 @@ export default class GameMap
 		let tank = this.tank_pool.get();
 		tank.id = id;
 		tank.move_to( x, y );
-		tank.turn_to( angle );
+
+		if ( angle )
+		{
+			tank.turn_to( angle );
+		}
 
 		this.tanks.set( id, tank );
 
 		return tank;
 	}
 
-	spawn_bullet( id, x, y, angle, p_id )
+	spawn_bullet( id, x, y, angle, owner_id )
 	{
+		let owner = this.tanks.get( owner_id );
+
+		if ( !owner )
+		{
+			return;
+		}
+
+		if ( owner.bullets.size >= 3 )
+		{
+			return;
+		}
+
 		let bullet = this.bullet_pool.get();
-		bullet.p_id = p_id;
+		bullet.owner = owner_id;
 		bullet.move_to( x, y );
 
-		this.bullets.set( projectile.id, projectile );
+		if ( id )
+		{
+			bullet.id = id;
+		}
 
-		return projectile;
+		if ( angle )
+		{
+			bullet.turn_to( angle );
+		}
+
+		owner.bullets.set( bullet.id, bullet );
+		this.bullets.set( bullet.id, bullet );
+
+		return bullet;
 	}
 
 	spawn_mine( id, x, y, p_id )
@@ -61,6 +91,11 @@ export default class GameMap
 		let mine = this.mine_pool.get();
 		mine.p_id = p_id;
 		mine.move_to( x, y );
+
+		if ( id )
+		{
+			mine.id = id;
+		}
 
 		this.mines.set( mine.id, mine );
 
@@ -72,16 +107,36 @@ export default class GameMap
 		let wall = this.wall_pool.get();
 		wall.move_to( x, y );
 
+		if ( id )
+		{
+			wall.id = id;
+		}
+
+		if ( width )
+		{
+			wall.set_width( width );
+		}
+
+		if ( height )
+		{
+			wall.set_height( height );
+		}
+
 		this.walls.set( wall.id, wall );
 
 		return wall;
 	}
 
-	spawn_explosion( x, y, radius )
+	spawn_explosion( id, x, y, radius )
 	{
 		let explosion = this.explosion_pool.get();
 		explosion.radius = radius;
 		explosion.move_to( x, y );
+
+		if ( id )
+		{
+			wall.id = id;
+		}
 
 		this.explosions.set( explosion.id, explosion );
 
@@ -92,6 +147,11 @@ export default class GameMap
 	{
 		let tank = this.tanks.get( id );
 
+		if ( !tank )
+		{
+			return;
+		}
+
 		this.tank_pool.release( tank );
 		this.tanks.delete( id );
 	};
@@ -100,14 +160,26 @@ export default class GameMap
 	{
 		let bullet = this.bullets.get( id );
 
+		if ( !bullet )
+		{
+			return;
+		}
+
+		this.tanks.get( bullet.owner ).bullets.delete( id );
 		this.bullet_pool.release( bullet );
-		this.projectiles.delete( id );
+		this.bullets.delete( id );
 	}
 
 	remove_mine( id )
 	{
 		let mine = this.mines.get( id );
 
+		if ( !mine )
+		{
+			return;
+		}
+
+		this.tanks.get( mine.owner ).mines.delete( id );
 		this.mine_pool.release( mine );
 		this.mines.delete( id );
 	}
@@ -116,6 +188,11 @@ export default class GameMap
 	{
 		let wall = this.mines.get( id );
 
+		if ( !wall )
+		{
+			return;
+		}
+
 		this.wall_pool.release( wall );
 		this.walls.delete( id );
 	}
@@ -123,6 +200,11 @@ export default class GameMap
 	remove_explosion( id )
 	{
 		let explosion = this.explosions.get( id );
+
+		if ( !explosion )
+		{
+			return;
+		}
 
 		this.explosion_pool.release( explosion );
 		this.explosions.delete( explosion );

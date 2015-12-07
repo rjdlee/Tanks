@@ -36,7 +36,9 @@ class Game_Class
 				for ( let [ other_id, wall ] of this.game_map.walls )
 				{
 					if ( Collision.is_colliding( tank, wall ) )
+					{
 						tank.rotateAlongWall( Collision.edge, Collision.overlap );
+					}
 				}
 
 				for ( let [ other_id, other_tank ] of this.game_map.tanks )
@@ -47,7 +49,9 @@ class Game_Class
 					}
 
 					if ( Collision.is_colliding( tank, other_tank ) )
+					{
 						tank.rotateAlongPlayer( Collision.edge.unit_vector() );
+					}
 				}
 			}
 
@@ -71,7 +75,9 @@ class Game_Class
 					}
 
 					if ( Collision.is_colliding( tank, other_tank ) )
+					{
 						velocity.project( Collision.edge.unit_vector() );
+					}
 				}
 
 				tank.move( velocity.x * dt, velocity.y * dt );
@@ -90,7 +96,6 @@ class Game_Class
 					dY /= 10;
 
 				tank.next_pos.add( -dX, -dY );
-
 				tank.move( dX, dY );
 			}
 
@@ -120,11 +125,9 @@ class Game_Class
 				velocity_y = bullet.velocity.y;
 
 			// Cancel bullets
-			for ( let [ id, collision_bullet ] of this.game_map.bullets )
+			for ( let [ collision_id, collision_bullet ] of this.game_map.bullets )
 			{
-				collision = bullet.isRectangleCollision( collision_bullet );
-
-				if ( collision )
+				if ( Collision.is_colliding( bullet, collision_bullet ) )
 				{
 					this.game_map.remove_bullet( bullet );
 					this.game_map.remove_bullet( collision_bullet );
@@ -132,23 +135,19 @@ class Game_Class
 			}
 
 			// Explode mines
-			for ( let [ id, mine ] of this.game_map.mines )
+			for ( let [ collision_id, collision_mine ] of this.game_map.mines )
 			{
-				collision = bullet.isRectangleCollision( mine );
-
-				if ( collision )
+				if ( Collision.is_colliding( bullet, collision_mine ) )
 				{
 					this.game_map.remove_bullet( bullet );
-					this.game_map.remove_mine( mine );
+					this.game_map.remove_mine( collision_mine );
 				}
 			}
 
 			// Bounce off walls
-			for ( let [ id, wall ] of this.game_map.walls )
+			for ( let [ collision_id, collision_wall ] of this.game_map.walls )
 			{
-				collision = bullet.isRectangleCollision( wall );
-
-				if ( collision )
+				if ( Collision.is_colliding( bullet, collision_wall ) )
 				{
 					bullet.bounce( Collision.edge );
 
