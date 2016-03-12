@@ -64,7 +64,7 @@ class GameMapState_Class
 	{
 		let data = {
 			tk: map.tick,
-			ti: Date.now(),
+			// ti: Date.now(),
 			x: map.width,
 			y: map.height,
 			t: new Object(),
@@ -105,8 +105,8 @@ class GameMapState_Class
 			map.height = data.y;
 		}
 
-		map.tick = data.tick;
-		map.timestamp = data.timestamp;
+		map.tick = data.tk;
+		// map.timestamp = data.ti;
 
 		for ( let entity_type of entity_fields )
 		{

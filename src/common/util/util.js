@@ -18,14 +18,25 @@ export default class Util
 
 	static timestamp()
 	{
-		// if ( typeof window !== 'undefined' &&
-		// 	typeof window.performance !== 'undefined' &&
-		// 	typeof window.performance.now !== 'undefined' )
-		// 	return window.performance.now();
-
 		return new Date().getTime();
 	}
 }
+
+Math.hypot = Math.hypot || function ()
+{
+	var y = 0;
+	var length = arguments.length;
+
+	for ( var i = 0; i < length; i++ )
+	{
+		if ( arguments[ i ] === Infinity || arguments[ i ] === -Infinity )
+		{
+			return Infinity;
+		}
+		y += arguments[ i ] * arguments[ i ];
+	}
+	return Math.sqrt( y );
+};
 
 Math.sign = Math.sign || function ( x )
 {

@@ -14,7 +14,7 @@ export default class GameMap
 {
 	constructor( width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT )
 	{
-		this.tick = 0;
+		this.tick = 10;
 		this.score = new Score();
 
 		this.width = width;

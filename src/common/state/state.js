@@ -1,4 +1,4 @@
-import StateMachine from 'javascript-state-machine/state-machine.min.js';
+import StateMachine from 'javascript-state-machine';
 
 let GameState = StateMachine.create(
 {

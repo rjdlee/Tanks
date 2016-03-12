@@ -1,6 +1,8 @@
 import Event from '../../common/state/event';
-import Tank from '../../common/entity/tank';
+import Game from '../../common/game/game';
 import Render from '../render/render';
+import Tank from '../../common/entity/tank';
+import InputEvent from '../../common/input/input_event';
 
 export default class Controller
 {
@@ -13,6 +15,8 @@ export default class Controller
 			left: false,
 			right: false
 		};
+		this.previously_sent_angle = player.barrel.angle;
+		this.input_event = new InputEvent( Game );
 
 		Event.subscribe( 'mousemove', this.mouseMoveListener.bind( this ) );
 		Event.subscribe( 'mousedown', this.mouseDownListener.bind( this ) );
@@ -26,22 +30,25 @@ export default class Controller
 		let adjusted_y = this.player.pos.y - mouse_pos.y - Render.camera.pos.y;
 		let new_angle = Math.atan2( adjusted_y, -adjusted_x );
 
-		let d_angle = Math.abs( new_angle - this.player.barrel.angle );
-		if ( d_angle > 0.05 )
+		let d_angle = Math.abs( new_angle - this.previously_sent_angle );
+		if ( d_angle > 0.5 )
 		{
-			Event.publish( 'controller_aim', this.player.barrel.angle );
+			Event.publish( 'controller_aim', new_angle );
+			this.previously_sent_angle = new_angle;
 		}
 
-		this.player.turn_barrel_to( new_angle );
+		this.input_event.mouse( null, this.player, new_angle );
 	}
 
 	mouseDownListener( map )
 	{
-		Event.publish( 'controller_shoot', this.player.barrel.angle );
+		// Don't interpolate
+		this.input_event.mouse( null, this.player );
 	}
 
 	keyDownListener( key )
 	{
+		// Key is already pressed
 		if ( this.key[ key ] )
 		{
 			return;
@@ -52,7 +59,7 @@ export default class Controller
 			this.key.up = true;
 			if ( !this.key.down )
 			{
-				this.player.set_speed( 1.5 );
+				this.input_event.speed( null, this.player, 1 );
 				Event.publish( 'controller_up' );
 			}
 		}
@@ -61,7 +68,7 @@ export default class Controller
 			this.key.down = true;
 			if ( !this.key.up )
 			{
-				this.player.set_speed( -1.5 );
+				this.input_event.speed( null, this.player, -1 );
 				Event.publish( 'controller_down' );
 			}
 		}
@@ -70,7 +77,7 @@ export default class Controller
 			this.key.left = true;
 			if ( !this.key.right )
 			{
-				this.player.set_turn_speed( 0.05 );
+				this.input_event.turn( null, this.player, 1 );
 				Event.publish( 'controller_left' );
 			}
 		}
@@ -79,7 +86,7 @@ export default class Controller
 			this.key.right = true;
 			if ( !this.key.left )
 			{
-				this.player.set_turn_speed( -0.05 );
+				this.input_event.turn( null, this.player, -1 );
 				Event.publish( 'controller_right' );
 			}
 		}
@@ -92,12 +99,12 @@ export default class Controller
 			this.key.up = false;
 			if ( this.key.down )
 			{
-				this.player.set_speed( -1.5 );
+				this.input_event.speed( null, this.player, -1 );
 				Event.publish( 'controller_down' );
 			}
 			else
 			{
-				this.player.set_speed( 0 );
+				this.input_event.speed( null, this.player, 0 );
 				Event.publish( 'controller_no_move' );
 			}
 		}
@@ -106,12 +113,12 @@ export default class Controller
 			this.key.down = false;
 			if ( this.key.up )
 			{
-				this.player.set_speed( 1.5 );
+				this.input_event.speed( null, this.player, 1 );
 				Event.publish( 'controller_up' );
 			}
 			else
 			{
-				this.player.set_speed( 0 );
+				this.input_event.speed( null, this.player, 0 );
 				Event.publish( 'controller_no_move' );
 			}
 		}
@@ -120,12 +127,12 @@ export default class Controller
 			this.key.left = false;
 			if ( this.key.right )
 			{
-				this.player.set_turn_speed( 0.05 );
+				this.input_event.turn( null, this.player, 1 );
 				Event.publish( 'controller_right' );
 			}
 			else
 			{
-				this.player.set_turn_speed( 0 );
+				this.input_event.turn( null, this.player, 0 );
 				Event.publish( 'controller_no_turn' );
 			}
 		}
@@ -134,12 +141,12 @@ export default class Controller
 			this.key.right = false;
 			if ( this.key.left )
 			{
-				this.player.set_turn_speed( -0.05 );
+				this.input_event.turn( null, this.player, -1 );
 				Event.publish( 'controller_left' );
 			}
 			else
 			{
-				this.player.set_turn_speed( 0 );
+				this.input_event.turn( null, this.player, 0 );
 				Event.publish( 'controller_no_turn' );
 			}
 		}

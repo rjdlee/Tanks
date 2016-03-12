@@ -10,7 +10,7 @@ The server and client share much of their code through the use of ES6 modules, w
 
 * The core of the game logic is done in common/game.js.
 * Client and server communication are done in client/connect.js and server/main.js, respectively.
-* State management code can be found in common/state/, the code uses a state machine and publish-subscribe for communication between ES6 classes
+* State management code can be found in common/state/state/, the code uses a state machine and publish-subscribe for communication between ES6 classes
 
 ## Conclusion
 

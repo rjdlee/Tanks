@@ -6,9 +6,9 @@ var wallTexture0 = new Image(),
 	wallTexture1 = new Image(),
 	floorTexture = new Image();
 
-wallTexture0.src = 'img/wall_1.gif';
-wallTexture1.src = 'img/wall_2.gif';
-floorTexture.src = 'img/floor_2.jpg';
+wallTexture0.src = 'assets/wall_1.gif';
+wallTexture1.src = 'assets/wall_2.gif';
+floorTexture.src = 'assets/floor_2.jpg';
 
 class Render_Class
 {
@@ -22,21 +22,21 @@ class Render_Class
 
 	draw( game_map )
 	{
-		this.camera.move_to( game_map.controller.player.pos.x, game_map.controller.player.pos.y, game_map.width, game_map.height );
+		// this.camera.move_to( game_map.controller.player.pos.x, game_map.controller.player.pos.y, game_map.width, game_map.height );
 
-		if ( !this.renderedWalls )
-		{
-			this.renderedWalls = true;
-			UI.resize_canvases( game_map.width, game_map.height );
-			this.draw_background( game_map );
-			this.draw_walls( game_map );
-		}
+		// if ( !this.renderedWalls )
+		// {
+		// 	this.renderedWalls = true;
+		// 	UI.resize_canvases( game_map.width, game_map.height );
+		// 	this.draw_background( game_map );
+		// 	this.draw_walls( game_map );
+		// }
 
-		this.draw_tanks( game_map.tanks );
-		this.draw_bullets( game_map.bullets );
-		this.draw_mines( game_map.mines );
-		this.draw_explosions( game_map.explosions );
-		this.move_walls();
+		// this.draw_tanks( game_map.tanks );
+		// this.draw_bullets( game_map.bullets );
+		// this.draw_mines( game_map.mines );
+		// this.draw_explosions( game_map.explosions );
+		// this.move_walls();
 	}
 
 	draw_tanks( tanks )

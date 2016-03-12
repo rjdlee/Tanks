@@ -1,12 +1,15 @@
 import express from 'express';
 import socketIO from 'socket.io';
-import Connect from './main';
+import ServerConnect from './connect';
+import Main from './main';
 
-let app = express();
-let server = app.listen( 3000, '127.0.0.1', listen_handler );
-let globalIO = socketIO( server );
-let main = new Connect( globalIO );
+var app = express();
+var server = app.listen( 3000, '127.0.0.1', listen_handler );
+var global_io = socketIO( server );
+var server_connect = new ServerConnect( global_io );
+var main = new Main( server_connect, global_io );
 
+// Serve clientside files (images, css, html, js files)
 app.use( express.static( __dirname + '/client' ) );
 
 function listen_handler()

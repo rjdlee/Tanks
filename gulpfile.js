@@ -1,24 +1,20 @@
-var gulp = require( 'gulp' );
-var babel = require( 'gulp-babel' );
-// var babelify = require( 'babelify' );
-var server = require( 'gulp-develop-server' );
-var source = require( 'vinyl-source-stream' );
-var changed = require( 'gulp-changed' );
-var sourcemaps = require( 'gulp-sourcemaps' );
-var browserify = require( 'browserify' );
 var autoprefixer = require( 'gulp-autoprefixer' );
-var watchify = require( 'watchify' );
+var babel = require( 'gulp-babel' );
 var cache = require( 'gulp-cache' );
+var changed = require( 'gulp-changed' );
+var gulp = require( 'gulp' );
 var rollup = require( "rollup" );
-var rollup_babel = require( "rollup-plugin-babel" );
+var rollup_babel = require( 'rollup-plugin-babel' );
+var server = require( 'gulp-develop-server' );
+var multi_entry = require( 'rollup-plugin-multi-entry' );
+var mocha = require( 'gulp-mocha' );
 
 var paths = {
+	src: 'src/',
 	client: 'src/client/',
 	common: 'src/common/',
 	server: 'src/server/',
-	html: 'src/client/view/',
-	css: 'src/client/view/css/',
-	assets: 'src/client/view/assets/',
+	assets: 'src/client/view/',
 	node_modules: 'node_modules',
 	build_client: 'build/client',
 	build_client_styles: 'build/client/styles',
@@ -29,24 +25,63 @@ var paths = {
 var files = {
 	client: paths.build_client + '/client.js',
 	server: paths.build_server + '/server_src.js'
-}
+};
 
-gulp.task( 'watch', [ 'build', 'server:start' ], function ()
+gulp.task( 'watch', [ 'build', 'server_start' ], function ()
 {
-	gulp.watch( [ paths.common + '**/*.js', paths.client + '**/*.js' ], [ 'client:js' ] );
-	gulp.watch( [ paths.common + '**/*.js', paths.server + '**/*.js' ], [ 'server:restart' ] );
-	gulp.watch( [ paths.html + '**/*.html' ], [ 'client:html' ] );
-	gulp.watch( [ paths.css + '**/*.css' ], [ 'client:css' ] );
-	gulp.watch( [ paths.assets + '**/*' ], [ 'client:assets' ] );
+	gulp.watch( [ 'src/**/*.test.js' ], [ 'test' ] );
+	gulp.watch( [ paths.common + '**/*.js' ], [ 'test', 'client_js', 'server_restart' ] );
+	gulp.watch( [ paths.client + '**/*.js' ], [ 'test', 'client_js' ] );
+	gulp.watch( [ paths.server + '**/*.js' ], [ 'test', 'server_restart' ] );
+	gulp.watch( [ paths.assets + '**/*' ], [ 'client_assets' ] );
 } );
 
-gulp.task( 'build', [ 'client:js', 'client:node_modules', 'client:html', 'client:css', 'client:assets', 'server:js' ] );
+gulp.task( 'build', [ 'test', 'client_js', 'client_assets', 'server_js' ] );
 
-gulp.task( 'client:js', function ()
+gulp.task( 'test', [ 'build_test' ], function ()
+{
+	return gulp.src( 'build/test/test.js',
+		{
+			read: false
+		} )
+		.pipe( mocha(
+		{
+			reporter: 'min'
+		} ) );
+} );
+
+gulp.task( 'build_test', function ()
 {
 	return rollup.rollup(
 	{
+		entry: [ 'src/**/*.test.js' ],
+		plugins: [ multi_entry.default(), rollup_babel() ]
+	} ).then( function ( bundle )
+	{
+		bundle.write(
+		{
+			moduleName: 'Test',
+			format: 'umd',
+			sourceMap: 'inline',
+			useStrict: 'true',
+			dest: 'build/test/test.js'
+		} );
+	} );
+} );
+
+gulp.task( 'client_js', function ()
+{
+	// Move node modules so client can import them with <script> tags
+	gulp.src( [ paths.node_modules + '/socket.io-client/socket.io.js',
+			paths.node_modules + '/javascript-state-machine/state-machine.js'
+		] )
+		.pipe( changed( paths.build_client ) )
+		.pipe( gulp.dest( paths.build_client ) );
+
+	return rollup.rollup(
+	{
 		entry: 'src/client/main.js',
+		external: [ 'javascript-state-machine' ],
 		plugins: [ rollup_babel() ]
 	} ).then( function ( bundle )
 	{
@@ -55,71 +90,69 @@ gulp.task( 'client:js', function ()
 			format: 'umd',
 			sourceMap: 'inline',
 			useStrict: 'true',
-			dest: 'build/client/client.js'
+			dest: paths.build_client + '/client.js',
+			globals:
+			{
+				'javascript-state-machine': 'StateMachine'
+			}
 		} );
 	} );
 } );
 
-gulp.task( 'client:node_modules', function ()
+gulp.task( 'client_assets', function ()
 {
-	return gulp.src( [ paths.node_modules + '/socket.io/node_modules/socket.io-client/socket.io.js',
-			paths.node_modules + '/javascript-state-machine/state-machine.js'
-		] )
+	// Client HTML files
+	gulp.src( paths.html + '**/*.html' )
 		.pipe( changed( paths.build_client ) )
 		.pipe( gulp.dest( paths.build_client ) );
-} );
 
-gulp.task( 'client:html', function ()
-{
-	return gulp.src( paths.html + '**/*.html' )
-		.pipe( changed( paths.build_client ) )
-		.pipe( gulp.dest( paths.build_client ) );
-} );
-
-gulp.task( 'client:css', function ()
-{
-	return gulp.src( paths.css + '**/*.css' )
+	// Client CSS files
+	gulp.src( paths.css + '**/*.css' )
 		.pipe( changed( paths.build_client_styles ) )
 		.pipe( autoprefixer(
 		{
 			browsers: [ 'last 2 versions' ]
 		} ) )
 		.pipe( gulp.dest( paths.build_client_styles ) );
-} );
 
-gulp.task( 'client:assets', function ()
-{
+	// Client image files
 	gulp.src( paths.assets + '**/*' )
 		.pipe( changed( paths.build_client_assets ) )
 		.pipe( cache( gulp.dest( paths.build_client_assets ) ) );
 
+	// Client favicon
 	return gulp.src( paths.assets + 'favicon.ico' )
 		.pipe( changed( paths.build_client ) )
 		.pipe( gulp.dest( paths.build_client ) );
 } );
 
-gulp.task( 'server:js', function ()
+gulp.task( 'server_js', function ()
 {
 	return rollup.rollup(
 	{
 		entry: 'src/server/server.js',
+		external: [ 'express', 'socket.io', 'javascript-state-machine' ],
 		plugins: [ rollup_babel() ]
 	} ).then( function ( bundle )
 	{
 		bundle.write(
 		{
+			moduleName: 'ServerConnect',
 			format: 'umd',
 			sourceMap: 'inline',
 			useStrict: 'true',
-			dest: 'build/server.js'
+			dest: paths.build_server + '/server.js',
+			globals:
+			{
+				'express': 'express',
+				'socket.io': 'socket.io',
+				'javascript-state-machine': 'StateMachine'
+			}
 		} );
 	} );
-
-	// gulp.src( './src/server/server.js' )
-	// .pipe( gulp.dest( paths.build_server ) );
 } );
 
-gulp.task( 'server:start', [ 'server:js' ], function ()
+gulp.task( 'server_start', [ 'server_js' ], function ()
 {
 	server.kill();
 	server.listen(
@@ -128,7 +161,7 @@ gulp.task( 'server:start', [ 'server:js' ], function ()
 	} );
 } );
 
-gulp.task( 'server:restart', [ 'server:js' ], function ()
+gulp.task( 'server_restart', [ 'server_js' ], function ()
 {
 	server.kill();
 	setTimeout( function ()

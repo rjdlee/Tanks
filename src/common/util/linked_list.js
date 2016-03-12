@@ -2,8 +2,9 @@ let DEFAULT_NODE_LIMIT = 100;
 
 export default class LinkedList
 {
-	constructor()
+	constructor( node_limit = DEFAULT_NODE_LIMIT )
 	{
+		this.node_limit = node_limit;
 		this.length = 0;
 	}
 
