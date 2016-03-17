@@ -1,4 +1,5 @@
-/* Borrowed from https://github.com/josephg/noisejs
+/**
+ * Borrowed from https://github.com/josephg/noisejs
  *
  * A speed-improved perlin and simplex noise algorithms for 2D.
  *
@@ -12,7 +13,6 @@
  * This code was placed in the public domain by its original author,
  * Stefan Gustavson. You may use it as you see fit, but
  * attribution is appreciated.
- *
  */
 
 class Grad
@@ -65,7 +65,7 @@ var grad3 = [ new Grad( 1, 1, 0 ), new Grad( -1, 1, 0 ), new Grad( 1, -1, 0 ), n
 	F3 = 1 / 3,
 	G3 = 1 / 6;
 
-class Noise_Generator
+class NoiseGenerator
 {
 	// This isn't a very good seeding function, but it works ok. It supports 2^16
 	// different seed values. Write something better if you need more seeds.
@@ -408,5 +408,5 @@ class Noise_Generator
 	}
 }
 
-let Noise = new Noise_Generator();
+let Noise = new NoiseGenerator();
 export default Noise;

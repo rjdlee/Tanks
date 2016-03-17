@@ -1,27 +1,46 @@
 import Entity from './entity';
 
-const COUNTDOWN_TICKS = 60 * 10;
+const COUNTDOWNTICKS = 60 * 10;
 
+/**
+ * Stationary weapon "dropped" by tanks
+ */
 export default class Mine extends Entity
 {
-	constructor( x, y, owner = null, time_left = COUNTDOWN_TICKS )
+	/**
+	 * @param {Number} x
+	 * @param {Number} y
+	 * @param {String} owner - ID of tank, which dropped this mine
+	 * @param {Number} timeLeft - Number of ticks until the mine explodes
+	 */
+	constructor( x, y, owner = null, timeLeft = COUNTDOWNTICKS )
 	{
 		super( x, y );
 
 		this.owner = owner;
-		this.time_left = COUNTDOWN_TICKS;
+		this.timeLeft = COUNTDOWNTICKS;
 	}
 
-	count_down( num_ticks )
+	/**
+	 * Called on each game tick
+	 *
+	 * @return {Boolean} Returns whether the countdown is over or not
+	 */
+	countDown( numTicks )
 	{
-		if ( this.time_left <= 1 )
+		if ( this.timeLeft <= 1 )
+		{
 			return true;
+		}
 
-		this.time_left -= num_ticks;
+		this.timeLeft -= numTicks;
 	}
 
+	/**
+	 * Resets mine to factory settings
+	 */
 	reset()
 	{
-		this.time_left = COUNTDOWN_TICKS;
+		this.timeLeft = COUNTDOWNTICKS;
 	}
 }

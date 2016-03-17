@@ -1,4 +1,9 @@
-import Game_Class from './game_class';
+import GameClass from './gameClass';
 
-let Game = new Game_Class();
+/**
+ * Export a singleton of the GameClass to maintain state across modules
+ *
+ * @public
+ */
+let Game = new GameClass();
 export default Game;

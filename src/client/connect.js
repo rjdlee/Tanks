@@ -1,66 +1,72 @@
-/*
-
-Note the mapping for sending keydown and keyup is as follows:
-
-		keydown		keyup
-Up 		0			4	
-Down 	1			5
-Left 	2			6
-Right	3			7
-
-*/
-
 import Controller from './ui/controller';
 import Connect from '../common/input/connect';
 import Event from '../common/state/event';
 import Game from '../common/game/game';
-import GameMapState from '../common/game/game_map_state';
+import Snapshot from '../common/snapshot/snapshot';
 import GameState from '../common/state/state';
-import InputEvent from '../common/input/input_event';
+import InputEvent from '../common/input/inputEvent';
 import UI from './ui/ui';
 import Util from '../common/util/util';
 import Vector from '../common/util/vector';
 
-const local_server_URI = 'http://localhost:3000';
-const remote_server_URI = 'http://tankti.me:3000';
+// Servers to connect to
+const localServerURI = 'http://localhost:3000';
+const remoteServerURI = 'http://tankti.me:3000';
 
-class ClientConnect_Class extends Connect
+/**
+ * Communicate with the server
+ *
+ * @private
+ */
+class ClientConnectClass extends Connect
 {
 	constructor()
 	{
 		super();
 
 		// Events to be sent to server
-		this.state_queue = new Map();
-		this.input_event = new InputEvent( Game );
+		this.stateQueue = new Map();
+		this.inputEvent = new InputEvent( Game );
 
-		this.socket = io( local_server_URI );
-		this.socket.on( 'connect', this.connect_handler.bind( this ) );
-		this.socket.on( 'connect_error', this.connect_error_handler.bind( this ) );
+		// Establish a connection with the server
+		this.socket = io( localServerURI );
+		this.socket.on( 'connect', this.connectHandler.bind( this ) );
+		this.socket.on( 'connectError', this.connectErrorHandler.bind( this ) );
 
-		Event.subscribe( 'controller_aim', this.pushStateEvent.bind( this, 'm' ) );
-		Event.subscribe( 'controller_shoot', this.pushStateEvent.bind( this, 'c' ) );
-		Event.subscribe( 'controller_up', this.pushStateEvent.bind( this, 'v', -1 ) );
-		Event.subscribe( 'controller_down', this.pushStateEvent.bind( this, 'v', 1 ) );
-		Event.subscribe( 'controller_no_move', this.pushStateEvent.bind( this, 'v', 0 ) );
-		Event.subscribe( 'controller_left', this.pushStateEvent.bind( this, 't', 1 ) );
-		Event.subscribe( 'controller_right', this.pushStateEvent.bind( this, 't', -1 ) );
-		Event.subscribe( 'controller_no_turn', this.pushStateEvent.bind( this, 't', 0 ) );
+		// Handle input controller events (send them to the server) 
+		Event.subscribe( 'controllerAim', this.pushStateEvent.bind( this, 'm' ) );
+		Event.subscribe( 'controllerShoot', this.pushStateEvent.bind( this, 'c' ) );
+		Event.subscribe( 'controllerMine', this.pushStateEvent.bind( this, 'r' ) );
+		Event.subscribe( 'controllerUp', this.pushStateEvent.bind( this, 'v', -1 ) );
+		Event.subscribe( 'controllerDown', this.pushStateEvent.bind( this, 'v', 1 ) );
+		Event.subscribe( 'controllerNoMove', this.pushStateEvent.bind( this, 'v', 0 ) );
+		Event.subscribe( 'controllerLeft', this.pushStateEvent.bind( this, 't', 1 ) );
+		Event.subscribe( 'controllerRight', this.pushStateEvent.bind( this, 't', -1 ) );
+		Event.subscribe( 'controllerNoTurn', this.pushStateEvent.bind( this, 't', 0 ) );
 
-		GameState.onload = this.sync_handler.bind( this );
-		GameState.onterminate = this.close_socket.bind( this );
+		// Watch for client input events
+		GameState.onload = this.syncHandler.bind( this );
+		GameState.onterminate = this.closeSocket.bind( this );
 	}
 
-	// Add an event to the queue to be sent to the server
+	/**
+	 * Add an event to the queue to be sent to the server
+	 *
+	 * @private
+	 */
 	pushStateEvent( key, data )
 	{
-		this.state_queue.set( key, data );
+		this.stateQueue.set( key, data );
 	}
 
-	// Send the queue of events to the server
-	send_state_queue()
+	/** 
+	 * Send the queue of events to the server
+	 *
+	 * @private
+	 */
+	sendStateQueue()
 	{
-		if ( this.state_queue.size === 0 )
+		if ( this.stateQueue.size === 0 )
 		{
 			return;
 		}
@@ -71,19 +77,22 @@ class ClientConnect_Class extends Connect
 		}
 
 		// Convert this damn thing to an object
-		let state_queue_object = {
-			t: String( Game.game_map.tick )
+		let stateQueueObject = {
+			t: String( Game.gameMap.tick )
 		};
-		for ( let [ key, data ] of this.state_queue.entries() )
+		for ( let [ key, data ] of this.stateQueue.entries() )
 		{
-			state_queue_object[ key ] = data;
+			stateQueueObject[ key ] = data;
 		}
 
-		this.send( this.socket, 'e', state_queue_object );
-		this.state_queue.clear();
+		this.send( this.socket, 'e', stateQueueObject );
+		this.stateQueue.clear();
 	};
 
-	close_socket()
+	/**
+	 * Disconnect from the server
+	 */
+	closeSocket()
 	{
 		if ( this.socket )
 		{
@@ -91,128 +100,147 @@ class ClientConnect_Class extends Connect
 		}
 	}
 
-	connect_handler()
+	/** 
+	 * Handle initial connection to the server
+	 *
+	 * @private
+	 */
+	connectHandler()
 	{
 		GameState.connect();
-		this.receive( this.socket, 'disconnect', this.disconnect_handler.bind( this ) );
+		this.receive( this.socket, 'disconnect', this.disconnectHandler.bind( this ) );
 	}
 
-	// Attempt different servers if failed to connect to this one
-	connect_error_handler()
+	/**
+	 * Attempt different servers if failed to connect to this one
+	 *
+	 * @private
+	 */
+	connectErrorHandler()
 	{
-		if ( this.socket.io.uri === local_server_URI )
+		if ( this.socket.io.uri === localServerURI )
 		{
-			this.socket.io.uri = remote_server_URI;
+			this.socket.io.uri = remoteServerURI;
 		}
 		else
 		{
-			this.socket.io.uri = local_server_URI;
+			this.socket.io.uri = localServerURI;
 		}
 	}
 
-	sync_handler()
+	/**
+	 * Begin syncing data with the server after player has clicked "play"
+	 *
+	 * @private
+	 */
+	syncHandler()
 	{
 		// Tell server to send game state
 		this.send( this.socket, 'handshake', UI.name );
 
 		// Receive server's game state
-		this.receive( this.socket, 'handshake', this.handshake_handler.bind( this ) );
+		this.receive( this.socket, 'handshake', this.handshakeHandler.bind( this ) );
 
 		// Listen for server's events
-		this.receive( this.socket, 'e', this.event_handler.bind( this ) );
+		this.receive( this.socket, 'e', this.eventHandler.bind( this ) );
 	}
 
-	handshake_handler( data )
+	/**
+	 * Receive data from the server and create a new game map from it
+	 *
+	 * @private
+	 */
+	handshakeHandler( data )
 	{
-		let game_map = GameMapState.decode( data, Game.game_map );
-		console.log( data, game_map.tanks, this.socket.id );
-		let player = game_map.tanks.get( this.socket.id );
-		game_map.controller = new Controller( player );
-
-		this.input_event.spawn( game_map.tick, this.socket.id, player.pos.x, player.pos.y, player.angle );
+		let gameMap = Snapshot.decode( data, Game.gameMap );
+		console.log( data, this.socket.id, Game.gameMap );
+		let player = gameMap.tanks.get( this.socket.id );
+		gameMap.controller = new Controller( player );
 
 		GameState.play();
 	}
 
-	disconnect_handler()
+	/**
+	 * Handle connection interruptions
+	 *
+	 * @private
+	 */
+	disconnectHandler()
 	{
 		GameState.disconnect();
+		console.log( GameState );
 	}
 
-	event_handler( data )
+	/**
+	 * Receive state change data from the server
+	 *
+	 * @private
+	 */
+	eventHandler( data )
 	{
-		let game_map = Game.game_map;
+		let gameMap = Game.gameMap;
 
-		if ( !game_map )
-		{
-			return;
-		}
-
-		if ( !game_map.controller )
+		if ( !gameMap || !gameMap.controller )
 		{
 			return;
 		}
 
 		for ( var id in data.t )
 		{
-			var tank = data.t[ id ];
+			// var tank = data.t[ id ];
 
-			if ( tank === 'remove' )
-			{
-				this.input_event.disconnect( id );
-				// game_map.remove_tank( id );
-				continue;
-			}
+			// if ( tank === 'remove' )
+			// {
+			// 	gameMap.removeTank( id );
+			// 	continue;
+			// }
 
-			if ( 'add' in tank )
-			{
-				let tankData = tank.add;
+			// if ( 'add' in tank )
+			// {
+			// 	let tankData = tank.add;
 
-				if ( id === this.socket.id )
-				{
-					continue;
-				}
+			// 	if ( id === this.socket.id )
+			// 	{
+			// 		continue;
+			// 	}
 
-				this.input_event.spawn( game_map.tick, id, tankData.x, tankData.y, tankData.a );
+			// 	let tankInstance = gameMap.spawnTank( id, tankData.x, tankData.y, tankData.a );
+			// 	tankInstance.setSpeed( tankData.s );
+			// 	tankInstance.turnBarrelTo( tankData.f );
 
-				let tank_instance = game_map.spawn_tank( id, tankData.x, tankData.y, tankData.a );
-				tank_instance.set_speed( tankData.s );
-				tank_instance.turn_barrel_to( tankData.f );
+			// 	continue;
+			// }
 
-				continue;
-			}
+			// if ( 'x' in tank )
+			// {
+			// 	let tankInstance = gameMap.tanks.get( id );
+			// 	tankInstance.setVelocity( tank.x, tankInstance.velocity.y );
+			// }
 
-			if ( 'x' in tank )
-			{
-				let tank_instance = game_map.tanks.get( id );
-				// tank_instance.next_pos.x = tank.x - tank_instance.pos.x;
-			}
+			// if ( 'y' in tank )
+			// {
+			// 	let tankInstance = gameMap.tanks.get( id );
+			// 	tankInstance.setVelocity( tankInstance.velocity.x, tank.y );
+			// }
 
-			if ( 'y' in tank )
-			{
-				let tank_instance = game_map.tanks.get( id );
-				// tank_instance.next_pos.y = tank.y - tank_instance.pos.y;
-			}
+			// if ( 'a' in tank )
+			// {
+			// 	let tankInstance = gameMap.tanks.get( id );
+			// 	tankInstance.setVelocity( tankInstance )
+			// 	tankInstance.turnTo( tank.a );
+			// }
 
-			if ( 'a' in tank )
-			{
-				console.log( id, game_map.tanks );
-				let tank_instance = game_map.tanks.get( id );
-				tank_instance.turn_to( tank.a );
-			}
+			// if ( 'f' in tank )
+			// {
+			// 	let tankInstance = gameMap.tanks.get( id );
+			// 	tankInstance.turnBarrelTo( tank.f );
+			// }
 
-			if ( 'f' in tank )
-			{
-				let tank_instance = game_map.tanks.get( id );
-				console.log( id, game_map.tanks );
-				tank_instance.turn_barrel_to( tank.f );
-			}
-
-			if ( 's' in tank )
-			{
-				let tank_instance = game_map.tanks.get( id );
-				tank_instance.set_speed( tank.s );
-			}
+			// if ( 's' in tank )
+			// {
+			// 	let tankInstance = gameMap.tanks.get( id );
+			// 	tankInstance.setSpeed( tank.s );
+			// }
 		}
 
 		for ( var id in data.b )
@@ -221,19 +249,24 @@ class ClientConnect_Class extends Connect
 
 			if ( bullet === 'remove' )
 			{
-				game_map.remove_bullet( id );
+				gameMap.removeBullet( id );
 				continue;
 			}
 
 			if ( 'add' in bullet )
 			{
 				var bulletData = bullet.add;
-				game_map.spawn_bullet( id, bulletData.x, bulletData.y, bulletData.a, bulletData.o );
+				gameMap.spawnBullet( id, bulletData.x, bulletData.y, bulletData.a, bulletData.o );
 			}
 
 		}
 	}
 }
 
-var ClientConnect = new ClientConnect_Class();
+/**
+ * Export a singleton of the ClientConnectCass to maintain state across modules
+ *
+ * @public
+ */
+var ClientConnect = new ClientConnectClass();
 export default ClientConnect;

@@ -1,51 +1,103 @@
 import Event from '../../common/state/event';
+import * as config from '../config';
 import Game from '../../common/game/game';
 import Render from '../render/render';
 import Tank from '../../common/entity/tank';
-import InputEvent from '../../common/input/input_event';
 
+/**
+ * Receives and processes user input from a keyboard and mouse
+ *
+ * @class
+ * @public
+ */
 export default class Controller
 {
+	/**
+	 * @param {Tank} player - User's tank entity
+	 */
 	constructor( player )
 	{
 		this.player = player;
+
+		/**
+		 * Keys currently pressed
+		 */
 		this.key = {
 			up: false,
 			down: false,
 			left: false,
 			right: false
 		};
-		this.previously_sent_angle = player.barrel.angle;
-		this.input_event = new InputEvent( Game );
 
+		/**
+		 * Last angle sent to the server
+		 */
+		this.previouslySentAngle = player.barrel.angle;
+
+		/**
+		 * Receive keyboard and mouse events from the class, UI
+		 */
 		Event.subscribe( 'mousemove', this.mouseMoveListener.bind( this ) );
-		Event.subscribe( 'mousedown', this.mouseDownListener.bind( this ) );
+		Event.subscribe( 'leftmouse', this.leftMouseHandler.bind( this ) );
+		Event.subscribe( 'rightmouse', this.rightMouseHandler.bind( this ) );
 		Event.subscribe( 'keydown', this.keyDownListener.bind( this ) );
 		Event.subscribe( 'keyup', this.keyUpListener.bind( this ) );
 	}
 
-	mouseMoveListener( mouse_pos )
+	/**
+	 * Turns the user's tank's barrel towards the mouse
+	 *
+	 * @param {Vector} mousePos - (x, y) coordinate of mouse relative to the screen
+	 */
+	mouseMoveListener( mousePos )
 	{
-		let adjusted_x = this.player.pos.x - mouse_pos.x - Render.camera.pos.x;
-		let adjusted_y = this.player.pos.y - mouse_pos.y - Render.camera.pos.y;
-		let new_angle = Math.atan2( adjusted_y, -adjusted_x );
+		let adjustedX = this.player.pos.x - mousePos.x - Render.camera.pos.x;
+		let adjustedY = this.player.pos.y - mousePos.y - Render.camera.pos.y;
+		let newAngle = Math.atan2( adjustedY, -adjustedX );
 
-		let d_angle = Math.abs( new_angle - this.previously_sent_angle );
-		if ( d_angle > 0.5 )
+		let dAngle = Math.abs( newAngle - this.previouslySentAngle );
+		if ( dAngle > 0.5 )
 		{
-			Event.publish( 'controller_aim', new_angle );
-			this.previously_sent_angle = new_angle;
+			Event.publish( 'controllerAim', newAngle );
+			this.previouslySentAngle = newAngle;
 		}
 
-		this.input_event.mouse( null, this.player, new_angle );
+		this.player.barrel.turnTo( newAngle );
 	}
 
-	mouseDownListener( map )
+	/**
+	 * Bullet shoot events are sent to the server
+	 *
+	 * @private
+	 */
+	leftMouseHandler()
 	{
-		// Don't interpolate
-		this.input_event.mouse( null, this.player );
+		// Don't interpolate, just send the event to the server
+		Event.publish( 'controllerShoot' );
 	}
 
+	/**
+	 * Landmine drop events are sent to the server
+	 *
+	 * @private
+	 */
+	rightMouseHandler()
+	{
+		// Don't interpolate, just send the event to the server
+		Event.publish( 'controllerMine' );
+	}
+
+	/**
+	 * Key events use a FSM to handle multiple keys pressed simultaneously
+	 *
+	 * Example:
+	 * If "up" and "down" keys are pressed, but "up" was pressed first,
+	 * the tank will move forward. If "up" is then released, but "down" is
+	 * still pressed, the tank will move down.
+	 *
+	 * @private
+	 * @param {String} key - "up", "down", "left", or "right"
+	 */
 	keyDownListener( key )
 	{
 		// Key is already pressed
@@ -59,8 +111,8 @@ export default class Controller
 			this.key.up = true;
 			if ( !this.key.down )
 			{
-				this.input_event.speed( null, this.player, 1 );
-				Event.publish( 'controller_up' );
+				this.player.setSpeed( config.TANKSPEED );
+				Event.publish( 'controllerUp' );
 			}
 		}
 		else if ( key === 'down' )
@@ -68,8 +120,8 @@ export default class Controller
 			this.key.down = true;
 			if ( !this.key.up )
 			{
-				this.input_event.speed( null, this.player, -1 );
-				Event.publish( 'controller_down' );
+				this.player.setSpeed( -config.TANKSPEED );
+				Event.publish( 'controllerDown' );
 			}
 		}
 		else if ( key === 'left' )
@@ -77,8 +129,8 @@ export default class Controller
 			this.key.left = true;
 			if ( !this.key.right )
 			{
-				this.input_event.turn( null, this.player, 1 );
-				Event.publish( 'controller_left' );
+				this.player.setTurnSpeed( config.TANKTURNSPEED );
+				Event.publish( 'controllerLeft' );
 			}
 		}
 		else if ( key === 'right' )
@@ -86,12 +138,18 @@ export default class Controller
 			this.key.right = true;
 			if ( !this.key.left )
 			{
-				this.input_event.turn( null, this.player, -1 );
-				Event.publish( 'controller_right' );
+				this.player.setTurnSpeed( -config.TANKTURNSPEED );
+				Event.publish( 'controllerRight' );
 			}
 		}
 	}
 
+	/**
+	 * Refer to keyDownListener(): {@link Controller:#keyDownListener}
+	 *
+	 * @private
+	 * @param {String} key - "up", "down", "left", or "right"
+	 */
 	keyUpListener( key )
 	{
 		if ( key === 'up' )
@@ -99,13 +157,13 @@ export default class Controller
 			this.key.up = false;
 			if ( this.key.down )
 			{
-				this.input_event.speed( null, this.player, -1 );
-				Event.publish( 'controller_down' );
+				this.player.setSpeed( -config.TANKSPEED );
+				Event.publish( 'controllerDown' );
 			}
 			else
 			{
-				this.input_event.speed( null, this.player, 0 );
-				Event.publish( 'controller_no_move' );
+				this.player.setSpeed( 0 );
+				Event.publish( 'controllerNoMove' );
 			}
 		}
 		else if ( key === 'down' )
@@ -113,13 +171,13 @@ export default class Controller
 			this.key.down = false;
 			if ( this.key.up )
 			{
-				this.input_event.speed( null, this.player, 1 );
-				Event.publish( 'controller_up' );
+				this.player.setSpeed( config.TANKSPEED );
+				Event.publish( 'controllerUp' );
 			}
 			else
 			{
-				this.input_event.speed( null, this.player, 0 );
-				Event.publish( 'controller_no_move' );
+				this.player.setSpeed( 0 );
+				Event.publish( 'controllerNoMove' );
 			}
 		}
 		else if ( key === 'left' )
@@ -127,13 +185,13 @@ export default class Controller
 			this.key.left = false;
 			if ( this.key.right )
 			{
-				this.input_event.turn( null, this.player, 1 );
-				Event.publish( 'controller_right' );
+				this.player.setTurnSpeed( config.TANKTURNSPEED );
+				Event.publish( 'controllerRight' );
 			}
 			else
 			{
-				this.input_event.turn( null, this.player, 0 );
-				Event.publish( 'controller_no_turn' );
+				this.player.setTurnSpeed( 0 );
+				Event.publish( 'controllerNoTurn' );
 			}
 		}
 		else if ( key === 'right' )
@@ -141,13 +199,13 @@ export default class Controller
 			this.key.right = false;
 			if ( this.key.left )
 			{
-				this.input_event.turn( null, this.player, -1 );
-				Event.publish( 'controller_left' );
+				this.player.setTurnSpeed( -config.TANKTURNSPEED );
+				Event.publish( 'controllerLeft' );
 			}
 			else
 			{
-				this.input_event.turn( null, this.player, 0 );
-				Event.publish( 'controller_no_turn' );
+				this.player.setTurnSpeed( 0 );
+				Event.publish( 'controllerNoTurn' );
 			}
 		}
 	}

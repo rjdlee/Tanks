@@ -1,20 +1,29 @@
 import Collision from '../common/collision/collision';
-import GameMap from '../common/game/game_map';
-import GameMapGenerator from '../common/game/game_map_generator';
-import GameMapState from '../common/game/game_map_state';
+import GameMap from '../common/game/gameMap';
+import GameMapGenerator from '../common/game/gameMapGenerator';
 import Score from '../common/game/score';
 import Tank from '../common/entity/tank';
 
+/**
+ * Same as a regular GameMap, but spawns random walls
+ */
 export default class ServerGameMap extends GameMap
 {
 	constructor( width, height )
 	{
 		super( width, height );
 
-		this.emptyTiles = GameMapGenerator.generate_walls( this.width, this.height, this.spawn_wall.bind( this ) ); // Generate random walls
-		this.walls.clear(); // TODO: REMOVE AFTER TESTING
+		this.emptyTiles = GameMapGenerator.generateWalls( this ); // Generate random walls
 	}
 
+	/**
+	 * Handler for events where a tank kills another tank
+	 * i.e. Respawn the victim and reset their score. Increase the murderer's score
+	 *
+	 * @public
+	 * @param {String} victimID
+	 * @param {String} murdererID
+	 */
 	kill( victimID, murdererID )
 	{
 		var victim = this.tanks[ victimID ],
@@ -35,11 +44,16 @@ export default class ServerGameMap extends GameMap
 		// stateQueue[ aid ] = assailantLog;
 	}
 
-	// Spawn a tank in a random, unoccupied location
-	randomly_spawn_tank( tankID )
+	/**
+	 * Spawn a tank in a random, unoccupied location
+	 *
+	 * @public
+	 * @param {String} tankID - Unique ID
+	 */
+	randomlySpawnTank( tankID )
 	{
-		var tank,
-			tries = 0;
+		let tank;
+		let tries = 0;
 
 		if ( !tankID )
 			return;
@@ -50,10 +64,10 @@ export default class ServerGameMap extends GameMap
 		}
 		else
 		{
-			tank = this.spawn_tank( tankID, 0, 0 );
+			tank = this.spawnTank( tankID, 0, 0 );
 		}
 
-		spawn_loop: while ( tries < 100 )
+		spawnLoop: while ( tries < 100 )
 		{
 			tries++;
 
@@ -64,40 +78,33 @@ export default class ServerGameMap extends GameMap
 			pos.multiply( 50 );
 
 			// Used for collision detection
-			let pos_object = {
+			let posObject = {
 				pos: pos
 			};
 
 			// Check for collisions with tanks
-			for ( let [ other_id, other_tank ] of this.tanks )
+			for ( let [ otherId, otherTank ] of this.tanks )
 			{
-				if ( Collision.is_near( other_tank, pos_object ) )
+				if ( Collision.isNear( otherTank, posObject ) )
 				{
-					continue spawn_loop;
+					continue spawnLoop;
 				}
 			}
 
 			// Check for collisions with projectiles
-			for ( let [ other_id, other_bullet ] in this.bullets )
+			for ( let [ otherId, otherBullet ] in this.bullets )
 			{
-				if ( Collision.is_near( other_bullet, pos_object ) )
+				if ( Collision.isNear( otherBullet, posObject ) )
 				{
-					continue spawn_loop;
+					continue spawnLoop;
 				}
 			}
 
 			// Apply the collision free position to the tank
-			tank.move_to( pos.x, pos.y );
-			break spawn_loop;
+			tank.moveTo( pos.x, pos.y );
+			break spawnLoop;
 		}
 
 		return tank;
 	}
-}
-
-// Extract a digit from a random seed ( Ex. Seed: 153 & Digit: 2 -> Return: 5 )
-function getSeedDigit( seed, digit )
-{
-	digit = Math.pow( 10, digit );
-	return Math.round( ( seed * digit ) % 10 );
 }

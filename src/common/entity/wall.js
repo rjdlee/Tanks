@@ -1,16 +1,31 @@
 import Entity from './entity';
 
+/**
+ * Stationary and inert entity
+ */
 export default class Wall extends Entity
 {
-	set_width( width = 0 )
+	/**
+	 * Change the wall's width
+	 *
+	 * @public
+	 * @param {NaturalNumber} width
+	 */
+	setWidth( width = 0 )
 	{
 		this.width = width;
-		this.bounding_box = this.create_rectangular_bounding_box();
+		this.boundingBox = this.createRectangularBoundingBox();
 	}
 
-	set_height( height = 0 )
+	/**
+	 * Change the wall's height
+	 *
+	 * @public
+	 * @param {NaturalNumber} heightw
+	 */
+	setHeight( height = 0 )
 	{
 		this.height = height;
-		this.bounding_box = this.create_rectangular_bounding_box();
+		this.boundingBox = this.createRectangularBoundingBox();
 	}
 }

@@ -1,27 +1,48 @@
+/**
+ * Helper functions
+ */
 export default class Util
 {
-	static generate_id()
+	/**
+	 * Generate a unique ID
+	 *
+	 * @public
+	 */
+	static generateId()
 	{
 		return Math.random();
 	}
 
-	// Efficient approximation for the square root of a and b
-	static sqrt_approximation( a, b )
-	{
-		return 4142 * Math.abs( a ) / 10000 + Math.abs( b );
-	}
-
-	static is_function( func )
+	/**
+	 * Determine if the argument is of type function
+	 *
+	 * @public
+	 * @param {} func - Variable to check if is a function
+	 */
+	static isFunction( func )
 	{
 		return Object.prototype.toString.call( func ) == '[object Function]';
 	}
 
+	/**
+	 * Get the current time
+	 *
+	 * @public
+	 */
 	static timestamp()
 	{
 		return new Date().getTime();
 	}
 }
 
+String.prototype.capitalizeFirstLetter = function ()
+{
+	return this.charAt( 0 ).toUpperCase() + this.slice( 1 );
+}
+
+/**
+ * Polyfil for Math.hypot
+ */
 Math.hypot = Math.hypot || function ()
 {
 	var y = 0;
@@ -38,9 +59,13 @@ Math.hypot = Math.hypot || function ()
 	return Math.sqrt( y );
 };
 
+/**
+ * Polyfill for Math.sign
+ */
 Math.sign = Math.sign || function ( x )
 {
-	x = +x; // convert to a number
+	// Convert x to a number
+	x = +x;
 	if ( x === 0 || isNaN( x ) )
 	{
 		return x;
@@ -48,6 +73,10 @@ Math.sign = Math.sign || function ( x )
 	return x > 0 ? 1 : -1;
 }
 
+/**
+ * Polyfill for Math.round
+ * Makes Math.round more efficient
+ */
 Math.round = function ( num )
 {
 	return ( 0.5 + num ) << 0;

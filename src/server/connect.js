@@ -1,9 +1,8 @@
 import Connect from '../common/input/connect';
 import Game from './game';
-import GameMapState from '../common/game/game_map_state';
-import InputEvent from '../common/input/input_event';
+import InputEvent from '../common/input/inputEvent';
 
-const SEND_DATA_DELAY = 2; // Ticks between sending data to clients
+const SENDDATADELAY = 2; // Ticks between sending data to clients
 
 export default class ServerConnect extends Connect
 {
@@ -11,118 +10,127 @@ export default class ServerConnect extends Connect
 	{
 		super();
 
-		this.input_event = new InputEvent( Game );
+		this.inputEvent = new InputEvent( Game );
 
 		// Players that have just connected and are waiting for map data
-		this.connecting_players = new Map();
+		this.connectingPlayers = new Map();
 
 		// Last snapshot sent to the clients
-		this.prev_snapshot;
+		this.prevSnapshot;
 
-		io.on( 'connection', this.connect_handler.bind( this ) );
+		io.on( 'connection', this.connectHandler.bind( this ) );
 	}
 
 	render( io )
 	{
-		let game_map = Game.game_map;
+		let gameMap = Game.gameMap;
 
-		for ( var [ socket, data ] of this.connecting_players )
+		for ( var [ socket, data ] of this.connectingPlayers )
 		{
-			let tank = game_map.tanks.get( socket.client.id );
+			console.log( socket.client.id, data );
+			let tank = gameMap.tanks.get( socket.client.id );
 			if ( !tank )
 			{
+				console.log( 'Failed to handshake ' + socket.client.id );
+				socket.client.disconnect();
+				this.connectingPlayers.remove( socket );
 				return;
 			}
 
 			tank.name = data || 'Tank';
 
-			let snapshot = Game.snapshot_list.head.data;
-			snapshot.leaderboard = game_map.score.leaderboard;
+			let snapshot = Game.snapshotList.head.data;
+			snapshot.leaderboard = gameMap.score.leaderboard;
 			this.send( socket, 'handshake', snapshot );
 		}
 
-		this.connecting_players.clear();
+		this.connectingPlayers.clear();
 
-		if ( Game.game_map.tick % SEND_DATA_DELAY === 0 )
+		if ( Game.gameMap.tick % SENDDATADELAY === 0 )
 		{
-			let head_snapshot = Game.snapshot_list.head;
+			let headSnapshot = Game.snapshotList.head;
 
-			if ( this.prev_snapshot )
+			if ( this.prevSnapshot )
 			{
-				var snapshot_diff = head_snapshot.diff( this.prev_snapshot );
+				var snapshotDiff = headSnapshot.diff( this.prevSnapshot );
 
-				// console.log( head_snapshot.data.t, this.prev_snapshot.data.t );
-				// console.log( 'changes', snapshot_diff );
-				this.send( io.sockets, 'e', snapshot_diff );
+				// console.log( headSnapshot.data.t, this.prevSnapshot.data.t );
+				// console.log( 'changes', snapshotDiff );
+				this.send( io.sockets, 'e', snapshotDiff );
 			}
 
-			this.prev_snapshot = head_snapshot;
+			this.prevSnapshot = headSnapshot;
 		}
 	}
 
-	connect_handler( socket )
+	connectHandler( socket )
 	{
 		console.log( socket.client.id + ' connected.' );
 
-		this.receive( socket, 'handshake', this.handshake_handler.bind( this, socket ) );
-		this.receive( socket, 'disconnect', this.disconnect_handler.bind( this, socket ) );
-		this.receive( socket, 'e', this.event_handler.bind( this, socket ) );
+		this.receive( socket, 'handshake', this.handshakeHandler.bind( this, socket ) );
+		this.receive( socket, 'disconnect', this.disconnectHandler.bind( this, socket ) );
+		this.receive( socket, 'e', this.eventHandler.bind( this, socket ) );
 	}
 
-	handshake_handler( socket, data )
+	handshakeHandler( socket, data )
 	{
 		let id = socket.client.id;
-		let game_map = Game.game_map;
-		let tick = game_map.tick;
+		let gameMap = Game.gameMap;
+		let tick = gameMap.tick;
 
-		Game.event_queue.insert( tick, tick, game_map.randomly_spawn_tank.bind( game_map, id ) );
-		this.connecting_players.set( socket, data );
+		// TODO: Fix this hack. We must recreate the same "random" tank spawn
+		let tempTank = gameMap.randomlySpawnTank( 'test' );
+		let randomPos = tempTank.pos;
+		Game.eventQueue.insert( tick, tick, gameMap.spawnTank.bind( gameMap, id, randomPos.x, randomPos.y ) );
+		this.connectingPlayers.set( socket, data );
 	}
 
-	disconnect_handler( socket )
+	disconnectHandler( socket )
 	{
 		let id = socket.client.id;
-		let game_map = Game.game_map;
-		let tick = Game.game_map.tick;
+		let gameMap = Game.gameMap;
+		let tick = Game.gameMap.tick;
 
-		Game.event_queue.insert( tick, tick, game_map.score.remove.bind( game_map.score, id ) );
-		Game.event_queue.insert( tick, tick, game_map.remove_tank.bind( game_map, id ) );
+		Game.eventQueue.insert( tick, tick, gameMap.score.remove.bind( gameMap.score, id ) );
+		Game.eventQueue.insert( tick, tick, gameMap.removeTank.bind( gameMap, id ) );
 		console.log( socket.client.id + ' disconnected.' );
 	}
 
-	event_handler( socket, data )
+	eventHandler( socket, data )
 	{
 		let id = socket.client.id;
-		let game_map = Game.game_map;
-		let tank = game_map.tanks.get( id );
+		let gameMap = Game.gameMap;
+		let tank = gameMap.tanks.get( id );
 		if ( !tank )
 		{
 			return;
 		}
 
+		console.log( socket.client.id, data );
+
 		if ( 'v' in data )
 		{
-			this.input_event.speed( data.t, tank, data.v );
+			this.inputEvent.speed( data.t, tank, data.v );
 		}
 
 		if ( 't' in data )
 		{
-			this.input_event.turn( data.t, tank, data.r );
+			this.inputEvent.turn( data.t, tank, data.r );
 		}
 
 		if ( 'm' in data )
 		{
-			this.input_event.mouse( data.t, tank, data.m );
+			this.inputEvent.mouse( data.t, tank, data.m );
 		}
 
 		if ( 'l' in data )
 		{
-			this.input_event.bullet( data.t, tank );
+			this.inputEvent.bullet( data.t, tank );
 		}
 
 		if ( 'r' in data )
 		{
-			this.input_event.mine( data.t, tank );
+			this.inputEvent.mine( data.t, tank );
 		}
 	}
 }

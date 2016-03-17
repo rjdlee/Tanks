@@ -1,22 +1,32 @@
-/*
-
-Tracks all player scores and sorts them from highest to lowest
-
-*/
-
+/**
+ * Tracks all player scores and sorts them from highest to lowest
+ */
 export default class Score
 {
 	constructor()
 	{
-		// Top ten player scores
+		/** 
+		 * Top ten player scores
+		 *
+		 * @public
+		 */
 		this.leaderboard = [];
 
-		// Full list of all player scores
+		/** Full sorted list of all player scores
+		 *
+		 * @private
+		 */
 		this.scoreboard = [];
 		this.scoreboardDict = {};
 	}
 
-	// Set a user's score in the scoreboard
+	/**
+	 * Set a tank's score in the scoreboard
+	 *
+	 * @public
+	 * @param {String} id - ID of the tank whose score is being set
+	 * @param {NaturalNumber} score - Score to set
+	 */
 	set( id, score )
 	{
 		// Entry to be stored in the scoreboard
@@ -27,7 +37,9 @@ export default class Score
 
 		// Remove existing entry for this id
 		if ( id in this.scoreboardDict )
+		{
 			this.scoreboard.splice( this.scoreboardDict[ id ], 1 );
+		}
 
 		// Add the entry in descending order
 		for ( var i = 0; i < this.scoreboard.length; i++ )
@@ -48,7 +60,12 @@ export default class Score
 		this.updateLeaderboard();
 	}
 
-	// Remove a user from the scoreboard
+	/**
+	 * Remove a user from the scoreboard
+	 *
+	 * @public
+	 * @param {String} id - ID of the tank to remove from the scoreboard
+	 */
 	remove( id )
 	{
 		this.scoreboard.splice( this.scoreboardDict[ id ], 1 );
@@ -57,19 +74,28 @@ export default class Score
 		this.updateLeaderboard();
 	}
 
-	// Update the top ten scores, return true if they change
+	/**
+	 * Update the top ten scores
+	 *
+	 * @private
+	 * @return {Boolean} True if the top ten scores have changed
+	 */
 	updateLeaderboard()
 	{
-		var lastLeaderboard = JSON.parse( JSON.stringify( this.leaderboard ) );
+		let lastLeaderboard = JSON.parse( JSON.stringify( this.leaderboard ) );
 		this.leaderboard = this.scoreboard.slice( 0, 10 );
 
 		for ( var i = 0; i < this.leaderboard.length; i++ )
 		{
 			if ( !( i in lastLeaderboard ) )
+			{
 				continue;
+			}
 
 			if ( this.leaderboard[ i ].id !== lastLeaderboard[ i ].id )
+			{
 				return true;
+			}
 		}
 	}
 }

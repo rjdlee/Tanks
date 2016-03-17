@@ -8,7 +8,7 @@ export default class EventQueue
 {
 	constructor()
 	{
-		this.limit = config.SNAPSHOT_LIMIT * config.SNAPSHOT_DELAY; // Index of the top of the queue
+		this.limit = config.SNAPSHOTLIMIT * config.SNAPSHOTDELAY; // Index of the top of the queue
 		this.top = 2 * this.limit - 1;
 		this.middle = this.limit; // Index of the current tick in the queue
 
@@ -25,7 +25,7 @@ export default class EventQueue
 		this.head = this.middle;
 	}
 
-	inc_index( i, amount = 1 )
+	incIndex( i, amount = 1 )
 	{
 		i += amount;
 		i = i % this.queue.length;
@@ -37,7 +37,7 @@ export default class EventQueue
 		return i;
 	}
 
-	dec_index( i, amount = 1 )
+	decIndex( i, amount = 1 )
 	{
 		i -= amount;
 		i = i % this.queue.length;
@@ -52,16 +52,16 @@ export default class EventQueue
 	/**
 	 * Convert a tick to an index in this queue
 	 * @param {int} tick - Tick to convert
-	 * @param {int} game_map_tick - Current game_map tick
+	 * @param {int} gameMapTick - Current gameMap tick
 	 */
-	tick_to_index( tick, game_map_tick )
+	tickToIndex( tick, gameMapTick )
 	{
-		let index = tick - game_map_tick;
+		let index = tick - gameMapTick;
 
 		// Limit the index to the size of the queue
 		if ( index < -this.limit )
 		{
-			index = this.inc_index( this.top );
+			index = this.incIndex( this.top );
 		}
 		else if ( index > this.limit )
 		{
@@ -69,7 +69,7 @@ export default class EventQueue
 		}
 		else
 		{
-			index = this.inc_index( index, this.middle );
+			index = this.incIndex( index, this.middle );
 		}
 
 		return index;
@@ -78,49 +78,49 @@ export default class EventQueue
 	/**
 	 * Convert an index to a tick
 	 * @param {int} i - Index in the queue
-	 * @param {int} game_map_tick - Current game_map tick
+	 * @param {int} gameMapTick - Current gameMap tick
 	 */
-	index_to_tick( i, game_map_tick )
+	indexToTick( i, gameMapTick )
 	{
 		if ( i < 0 || i >= this.queue.length )
 		{
 			return;
 		}
 
-		let tick = i + game_map_tick - this.middle;
+		let tick = i + gameMapTick - this.middle;
 		return tick;
 	}
 
 	/**
 	 * Iterates through the ticks between the lowest tick and the (current tick + 1)
 	 * @param {int} tick - Tick to begin the loop at
-	 * @param {int} game_map_tick - Current game_map tick
+	 * @param {int} gameMapTick - Current gameMap tick
 	 * @param {func} callback - Function to call on each loop iteration
 	 */
-	for_each( tick, game_map_tick, callback )
+	forEach( tick, gameMapTick, callback )
 	{
-		let i = this.tick_to_index( tick, game_map_tick );
-		let end_tick = this.inc_index( this.middle );
+		let i = this.tickToIndex( tick, gameMapTick );
+		let endTick = this.incIndex( this.middle );
 
-		// Iterate from lowest_tick to 1 tick in the future
-		while ( i < end_tick )
+		// Iterate from lowestTick to 1 tick in the future
+		while ( i < endTick )
 		{
 			callback( i );
-			i = this.inc_index( i );
+			i = this.incIndex( i );
 		}
 	}
 
 	// Add an empty array to the head of this and remove the last element of this
-	next_tick()
+	nextTick()
 	{
 		let length = this.queue.length;
 
-		this.middle = this.inc_index( this.middle );
-		this.top = this.inc_index( this.top );
+		this.middle = this.incIndex( this.middle );
+		this.top = this.incIndex( this.top );
 
 		// No new memory allocations are needed
-		let event_queue = this.queue[ this.top ];
-		event_queue.length = 0;
+		let eventQueue = this.queue[ this.top ];
+		eventQueue.length = 0;
 
 		// The lowest tick is no longer invalid since everything has been shifted
 		this.head = this.middle;
@@ -129,16 +129,16 @@ export default class EventQueue
 	/**
 	 * Inserts an event callback function (func) at the index tick
 	 * @param {int} tick - Tick to insert into
-	 * @param {int} game_map_tick - Current game_map tick
+	 * @param {int} gameMapTick - Current gameMap tick
 	 * @param {func} func - The function that performs the event
 	 */
-	insert( tick, game_map_tick, func )
+	insert( tick, gameMapTick, func )
 	{
 		// Center the index around the middle of this queue (current tick)
-		var index = this.tick_to_index( tick, game_map_tick );
+		var index = this.tickToIndex( tick, gameMapTick );
 
 		// Keep track of how far back we will have to rewind and replay from
-		this.set_head( index );
+		this.setHead( index );
 
 		this.queue[ index ].push( func );
 	}
@@ -146,16 +146,16 @@ export default class EventQueue
 	/**
 	 * Returns the lowest tick index as a tick
 	 */
-	get_head_tick( game_map_tick )
+	getHeadTick( gameMapTick )
 	{
-		return this.tick_to_index( this.head, game_map_tick );
+		return this.tickToIndex( this.head, gameMapTick );
 	}
 
 	/**
 	 * Sets a new lowest tick if it is lower than the current lowest
 	 * @param {int} index - Tick to set to centered around this.middle
 	 */
-	set_head( index )
+	setHead( index )
 	{
 		// Set the head only if the index is smaller than the current head
 		if ( index >= this.head )

@@ -73,7 +73,7 @@ export default class Vector
 
 
 	// Return the unit vector of this vector
-	unit_vector()
+	unitVector()
 	{
 		var length = this.length,
 			x = this.x ? Math.sign( this.x ) * Math.pow( this.x, 2 ) / length : 0,

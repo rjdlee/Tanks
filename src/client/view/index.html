@@ -14,8 +14,8 @@
 			<p>
 				You are a tank, shoot the other tanks.
 			</p>
-			<input id='menu_name' type='text' placeholder='Name'/>
-			<button id='menu_play' disabled='true'>Play</button>
+			<input id='menuName' type='text' placeholder='Name'/>
+			<button id='menuPlay' disabled='true'>Play</button>
 		</div>
 		<div class='col-5'>
 		<table>
@@ -47,12 +47,12 @@
 		</div>
 	</div>
 	<div id='hud' class='unselectable' style='visibility: hidden;'>
-		<div id='hud_score' class='unselectable'></div>
-		<ol id='hud_leaderboard' class='unselectable'></ol>
+		<div id='hudScore' class='unselectable'></div>
+		<ol id='hudLeaderboard' class='unselectable'></ol>
 	</div>
 </div>
-<canvas id='walls_canvas' width=1200 height=710></canvas>
-<canvas id='tanks_canvas' width=1200 height=710></canvas>
+<canvas id='wallsCanvas' width=1200 height=710></canvas>
+<canvas id='tanksCanvas' width=1200 height=710></canvas>
 
 <script type='text/javascript' src='socket.io.js'></script>
 <script type='text/javascript' src='state-machine.js'></script>

@@ -1,18 +1,28 @@
-let DEFAULT_NODE_LIMIT = 100;
-
+/**
+ * Bidirectional linked list
+ *
+ * @private
+ */
 export default class LinkedList
 {
-	constructor( node_limit = DEFAULT_NODE_LIMIT )
+	constructor( nodeLimit = 100 )
 	{
-		this.node_limit = node_limit;
+		this.nodeLimit = nodeLimit;
 		this.length = 0;
 	}
 
-	// Return node by array index
+	/**
+	 * Retrieve and return the node at the given index
+	 *
+	 * @param {integer} Index (from 0 to list length) of the node to retrieve
+	 * @return {Object} Node at the index
+	 */
 	get( index )
 	{
 		if ( this.length <= index )
+		{
 			return;
+		}
 
 		var node = this.tail;
 		for ( var i = 1; i < index; i++ )
@@ -23,7 +33,11 @@ export default class LinkedList
 		return node;
 	}
 
-	// Add a new node to the head
+	/** 
+	 * Add a new node to the head of the list
+	 *
+	 * @param {Object} Node to push to the top of the list
+	 */
 	unshift( node )
 	{
 		if ( this.length >= 1 )
@@ -43,9 +57,9 @@ export default class LinkedList
 		this.length++;
 
 		// Limit number of nodes
-		if ( this.length > this.node_limit )
+		if ( this.length > this.nodeLimit )
 		{
-			var shift = this.length - this.node_limit,
+			var shift = this.length - this.nodeLimit,
 				currNode = this.tail;
 
 			for ( var i = 0; i < shift; i++ )
@@ -54,11 +68,15 @@ export default class LinkedList
 			currNode.prev = undefined;
 			this.tail = currNode;
 
-			this.length = this.node_limit;
+			this.length = this.nodeLimit;
 		}
 	}
 
-	// Remove and return the head node
+	/**
+	 * Remove and return the node at the head of the list
+	 *
+	 * @return {Object} Head of the list
+	 */
 	shift()
 	{
 		if ( !this.length )

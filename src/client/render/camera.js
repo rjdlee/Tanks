@@ -17,20 +17,20 @@ export default class Camera
 		this.height = height;
 
 		// Used to find boundaries since pos is in center
-		this.half_width = this.width >> 2;
-		this.half_height = this.height >> 2;
+		this.halfWidth = this.width >> 2;
+		this.halfHeight = this.height >> 2;
 	}
 
 	// Move the camera to the position at x and y and recalculate its bounding box
-	move_to( x, y, boundX, boundY )
+	moveTo( x, y, boundX, boundY )
 	{
-		x = Math.max( x, this.half_width );
-		y = Math.max( y, this.half_height );
+		x = Math.max( x, this.halfWidth );
+		y = Math.max( y, this.halfHeight );
 
-		x = Math.min( x, boundX - this.half_width );
-		y = Math.min( y, boundY + this.half_height );
+		x = Math.min( x, boundX - this.halfWidth );
+		y = Math.min( y, boundY + this.halfHeight );
 
-		this.pos.x = x - this.half_width;
-		this.pos.y = y - this.half_height;
+		this.pos.x = x - this.halfWidth;
+		this.pos.y = y - this.halfHeight;
 	}
 }

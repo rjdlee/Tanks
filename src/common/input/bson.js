@@ -1,11 +1,8 @@
-/*
-
-Converts JSON data into Binary JSON (BSON) data to be used in more efficient
-communication between the server and client.
-
-*/
-
 /**
+ * Converts JSON data into Binary JSON (BSON) data to be used in more efficient
+ * communication between the server and client.
+ *
+ *
  * Copyright (c) 2009-2012 Ivo Wetzel.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,6 +23,7 @@ communication between the server and client.
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 // Some lookup tables
 var chrTable = new Array( 256 ),
 	maskTable = new Array( 9 ),
@@ -115,7 +113,7 @@ function read( count )
 	return val;
 }
 
-function _encode( value, top )
+function Encode( value, top )
 {
 
 	// Numbers
@@ -293,7 +291,7 @@ function _encode( value, top )
 		write( 4, 3 );
 		for ( var i = 0, l = value.length; i < l; i++ )
 		{
-			_encode( value[ i ] );
+			Encode( value[ i ] );
 		}
 
 		if ( !top )
@@ -309,8 +307,8 @@ function _encode( value, top )
 		write( 5, 3 );
 		for ( var e in value )
 		{
-			_encode( e );
-			_encode( value[ e ] );
+			Encode( e );
+			Encode( value[ e ] );
 		}
 
 		if ( !top )
@@ -331,7 +329,7 @@ export default class BSON
 		bitValue = 0;
 		bitStream = '';
 
-		_encode( value, true );
+		Encode( value, true );
 
 		write( 7, 3 );
 		write( 1, 1 );

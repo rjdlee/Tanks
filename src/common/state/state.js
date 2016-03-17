@@ -1,5 +1,10 @@
 import StateMachine from 'javascript-state-machine';
 
+/**
+ * Finite state machine describing clientside game state
+ *
+ * @public
+ */
 let GameState = StateMachine.create(
 {
 	initial: 'disconnected',
@@ -36,24 +41,34 @@ let GameState = StateMachine.create(
 	} ]
 } );
 
-GameState.addEventListener = function ( event_name, callback_function )
+/**
+ * Adds event listeners to game state changes
+ *
+ * @public
+ * @param {String} eventName - Event to listen for
+ * @param {Function} callbackFunction - Listener function to call when the event occurs
+ */
+GameState.addEventListener = function ( eventName, callbackFunction )
 {
-	let event_listeners_name = event_name + 'listeners';
-	if ( this[ event_listeners_name ] )
+	// Keep an array of each listener for an event
+	let eventListenersName = eventName + 'listeners';
+	if ( this[ eventListenersName ] )
 	{
-		this[ event_listeners_name ].push( callback_function );
+		this[ eventListenersName ].push( callbackFunction );
 	}
 	else
 	{
-		this[ event_listeners_name ] = [ callback_function ];
+		this[ eventListenersName ] = [ callbackFunction ];
 	}
 
-	let onevent_name = 'on' + event_name;
-	if ( !this[ onevent_name ] )
+	let oneventName = 'on' + eventName;
+	if ( !this[ oneventName ] )
 	{
-		this[ onevent_name ] = function ( data )
+		// Create the event listener for the event
+		this[ oneventName ] = function ( data )
 		{
-			for ( var listener of this[ event_listeners_name ] )
+			// Loop through and call each listener
+			for ( var listener of this[ eventListenersName ] )
 			{
 				listener( data );
 			}

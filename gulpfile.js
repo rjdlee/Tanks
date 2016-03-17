@@ -12,9 +12,9 @@ var mocha = require( 'gulp-mocha' );
 var paths = {
 	src: 'src/',
 	client: 'src/client/',
+	assets: 'src/client/view/',
 	common: 'src/common/',
 	server: 'src/server/',
-	assets: 'src/client/view/',
 	node_modules: 'node_modules',
 	build_client: 'build/client',
 	build_client_styles: 'build/client/styles',
@@ -102,12 +102,12 @@ gulp.task( 'client_js', function ()
 gulp.task( 'client_assets', function ()
 {
 	// Client HTML files
-	gulp.src( paths.html + '**/*.html' )
+	gulp.src( paths.assets + '**/*.html' )
 		.pipe( changed( paths.build_client ) )
 		.pipe( gulp.dest( paths.build_client ) );
 
 	// Client CSS files
-	gulp.src( paths.css + '**/*.css' )
+	gulp.src( paths.assets + '**/*.css' )
 		.pipe( changed( paths.build_client_styles ) )
 		.pipe( autoprefixer(
 		{
@@ -155,10 +155,13 @@ gulp.task( 'server_js', function ()
 gulp.task( 'server_start', [ 'server_js' ], function ()
 {
 	server.kill();
-	server.listen(
+	setTimeout( function ()
 	{
-		path: paths.build_server + '/server.js'
-	} );
+		server.listen(
+		{
+			path: paths.build_server + '/server.js'
+		} );
+	}, 1000 );
 } );
 
 gulp.task( 'server_restart', [ 'server_js' ], function ()

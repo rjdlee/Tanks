@@ -2,13 +2,23 @@ import Event from '../../common/state/event';
 import GameState from '../../common/state/state';
 import Vector from '../../common/util/vector';
 
-class UI_Class
+/**
+ * Connects the game and the DOM/ browser
+ *
+ * @class
+ * @private
+ */
+class UIClass
 {
 	constructor()
 	{
-		this.mouse_pos = new Vector();
-		this.canvases = new Map();
-		this.contexts = new Map();
+		this.mousePos = new Vector();
+
+		/**
+		 * Map keycodes to key names
+		 *
+		 * @private
+		 */
 		this.keys = new Map();
 		this.keys.set( 37, 'left' );
 		this.keys.set( 38, 'up' );
@@ -17,49 +27,88 @@ class UI_Class
 		this.keys.set( 32, 'space' );
 		this.keys.set( 80, 'p' );
 
+		/**
+		 * Save DOM elements to minimize DOM access
+		 *
+		 * @private
+		 */
 		this.menu = document.getElementById( 'menu' );
-		this.menu_name = document.getElementById( 'menu_name' );
-		this.menu_play = document.getElementById( 'menu_play' );
+		this.menuName = document.getElementById( 'menuName' );
+		this.menuPlay = document.getElementById( 'menuPlay' );
 		this.loading = document.getElementById( 'loading' );
 		this.hud = document.getElementById( 'hud' );
-		this.hud_leaderboard = document.getElementById( 'hud_leaderboard' );
-		this.hud_score = document.getElementById( 'hud_score' );
+		this.hudLeaderboard = document.getElementById( 'hudLeaderboard' );
+		this.hudScore = document.getElementById( 'hudScore' );
 
-		this.canvases.set( 'tanks', document.getElementById( 'tanks_canvas' ) );
-		this.canvases.set( 'walls', document.getElementById( 'walls_canvas' ) );
+		/**
+		 * Canvases for rendering and their contexts
+		 *
+		 * @public
+		 */
+		this.canvases = new Map( [
+			[ 'tanks', document.getElementById( 'tanksCanvas' ) ],
+			[ 'walls', document.getElementById( 'wallsCanvas' ) ]
+		] );
+		this.contexts = this.getCanvasesContexts( this.canvases );
 
-		this.menu_name.addEventListener( 'change', this.update_name.bind( this ) );
-		this.menu_play.addEventListener( 'click', this.switch_to_loading_UI.bind( this ) );
+		/**
+		 * Game menu interactions
+		 */
+		this.menuName.addEventListener( 'change', this.updateName.bind( this ) );
+		this.menuPlay.addEventListener( 'click', this.switchToLoadingUI.bind( this ) );
 
-		window.addEventListener( 'keydown', this.key_down_handler.bind( this ) );
-		window.addEventListener( 'keyup', this.key_up_handler.bind( this ) );
-		window.addEventListener( 'mousemove', this.mouse_move_handler.bind( this ) );
-		window.addEventListener( 'mousedown', this.mouse_down_handler.bind( this ) );
-		window.addEventListener( 'beforeunload', this.before_unload_handler.bind( this ) );
+		/**
+		 * Game input mouse and keyboard events
+		 */
+		window.addEventListener( 'keydown', this.keyDownHandler.bind( this ) );
+		window.addEventListener( 'keyup', this.keyUpHandler.bind( this ) );
+		window.addEventListener( 'mousemove', this.mouseMoveHandler.bind( this ) );
+		window.addEventListener( 'mousedown', this.leftMouseHandler.bind( this ) );
+		window.addEventListener( 'contextmenu', this.rightMouseHandler.bind( this ) );
+		window.addEventListener( 'beforeunload', this.beforeUnloadHandler.bind( this ) );
 
-		this.get_canvases_contexts();
-
-		GameState.addEventListener( 'play', this.switch_to_game_UI.bind( this ) );
+		/**
+		 * Changes in game state hide and show the game menu
+		 */
+		GameState.addEventListener( 'play', this.switchToGameUI.bind( this ) );
 		GameState.onconnect = function ()
 		{
-			this.menu_play.disabled = false;
+			this.menuPlay.disabled = false;
 		}.bind( this );
 		GameState.addEventListener( 'disconnect', function ()
 		{
-			this.menu_play.disabled = true;
-			this.switch_to_menu_UI();
+			this.menuPlay.disabled = true;
+			this.switchToMenuUI();
 		}.bind( this ) );
 	}
 
-	get_canvases_contexts()
+	/**
+	 * Gets the 2d contexts of the DOM canvases
+	 *
+	 * @private
+	 * @param {Map} canvases
+	 * @return {Map} contexts
+	 */
+	getCanvasesContexts( canvases )
 	{
-		for ( let [ id, canvas ] of this.canvases )
+		let contexts = new Map();
+
+		for ( let [ id, canvas ] of canvases )
 		{
-			this.contexts.set( id, canvas.getContext( '2d' ) );
+			contexts.set( id, canvas.getContext( '2d' ) );
 		}
+
+		return contexts;
 	}
 
-	resize_canvases( width, height )
+	/**
+	 * Resizes the DOM's canvases
+	 *
+	 * @public
+	 * @param {NaturalNumber} width
+	 * @param {NaturalNumber} height 
+	 */
+	resizeCanvases( width, height )
 	{
 		for ( let [ id, canvas ] of this.canvases )
 		{
@@ -68,17 +117,35 @@ class UI_Class
 		}
 	}
 
+	/**
+	 * Make a DOM element visible
+	 *
+	 * @private
+	 * @param {Element} DOMElement
+	 */
 	show( DOMElement )
 	{
 		DOMElement.style.visibility = 'visible';
 	}
 
+	/**
+	 * Make a DOM element invisible
+	 *
+	 * @private
+	 * @param {Element} DOMElement
+	 */
 	hide( DOMElement )
 	{
 		DOMElement.style.visibility = 'hidden';
 	}
 
-	key_down_handler( e )
+	/**
+	 * Handle key events only if the game is running
+	 *
+	 * @private
+	 * @param {Event} e - Event's data
+	 */
+	keyDownHandler( e )
 	{
 		if ( !GameState.is( 'playing' ) )
 		{
@@ -91,7 +158,13 @@ class UI_Class
 		}
 	}
 
-	key_up_handler( e )
+	/**
+	 * Handle key events only if the game is running
+	 *
+	 * @private
+	 * @param {Event} e - Event's data
+	 */
+	keyUpHandler( e )
 	{
 		if ( !GameState.is( 'playing' ) )
 		{
@@ -104,33 +177,63 @@ class UI_Class
 		}
 	}
 
-	mouse_move_handler( e )
+	/**
+	 * Handle mouse events only if the game is running
+	 *
+	 * @private
+	 * @param {Event} e - Event's data
+	 */
+	mouseMoveHandler( e )
 	{
 		if ( !GameState.is( 'playing' ) )
 		{
 			return;
 		}
 
-		this.mouse_pos.set( e.clientX, e.clientY );
-		Event.publish( 'mousemove', this.mouse_pos );
+		this.mousePos.set( e.clientX, e.clientY );
+		Event.publish( 'mousemove', this.mousePos );
 	}
 
-	mouse_down_handler( e )
+	/**
+	 * Handle mouse events only if the game is running
+	 *
+	 * @private
+	 * @param {Event} e - Event's data
+	 */
+	leftMouseHandler( e )
 	{
 		if ( !GameState.is( 'playing' ) )
 		{
 			return;
 		}
 
-		Event.publish( 'mousedown' );
+		Event.publish( 'leftmouse' );
 	}
 
-	before_unload_handler()
+	/**
+	 * Handle mouse events only if the game is running
+	 *
+	 * @private
+	 * @param {Event} e - Event's data
+	 */
+	rightMouseHandler( e )
 	{
-		Event.publish( 'window_before_unload' );
+		if ( !GameState.is( 'playing' ) )
+		{
+			return;
+		}
+
+		e.preventDefault();
+		Event.publish( 'rightmouse' );
+		return false;
 	}
 
-	switch_to_game_UI()
+	beforeUnloadHandler()
+	{
+		Event.publish( 'windowBeforeUnload' );
+	}
+
+	switchToGameUI()
 	{
 		this.show( this.hud );
 
@@ -138,7 +241,7 @@ class UI_Class
 		this.hide( this.loading );
 	}
 
-	switch_to_loading_UI()
+	switchToLoadingUI()
 	{
 		this.show( this.loading );
 
@@ -151,7 +254,7 @@ class UI_Class
 		}
 	}
 
-	switch_to_menu_UI()
+	switchToMenuUI()
 	{
 		this.show( this.menu );
 
@@ -164,18 +267,18 @@ class UI_Class
 		}
 	}
 
-	update_name( e )
+	updateName( e )
 	{
 		this.name = e.target.value;
 	}
 
-	update_score( score = 0 )
+	updateScore( score = 0 )
 	{
 		this.id( 'score' )
 			.innerHTML = 'Score: ' + score;
 	}
 
-	update_leaderboard( controllerID, leaderboard )
+	updateLeaderboard( controllerID, leaderboard )
 	{
 		var leaderboardHTML = '<h3>Leaderboard</h3>';
 
@@ -199,5 +302,5 @@ class UI_Class
 	}
 }
 
-var UI = new UI_Class();
+var UI = new UIClass();
 export default UI;

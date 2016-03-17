@@ -14,13 +14,13 @@ describe( 'Connect', function ()
 	};
 	let connect = new Connect( socket );
 
-	afterEach( 'Clear the Game event_queue and connect players', function ()
+	afterEach( 'Clear the Game eventQueue and connect players', function ()
 	{
-		Game.event_queue.queue[ Game.event_queue.middle ].length = 0;
-		connect.connecting_players.length = 0;
+		Game.eventQueue.queue[ Game.eventQueue.middle ].length = 0;
+		connect.connectingPlayers.length = 0;
 	} );
 
-	describe( '#connect_handler()', function ()
+	describe( '#connectHandler()', function ()
 	{
 		describe( 'When called', function ()
 		{
@@ -31,40 +31,40 @@ describe( 'Connect', function ()
 				{
 					i++;
 				};
-				connect.connect_handler( socket );
+				connect.connectHandler( socket );
 			} );
 		} );
 	} );
 
-	describe( '#handshake_handler()', function ()
+	describe( '#handshakeHandler()', function ()
 	{
 		describe( 'When called', function ()
 		{
 			it( 'should add a spawn function to the event queue and connecting players list', function ()
 			{
-				let data = 'client_name';
-				connect.handshake_handler( socket, data );
+				let data = 'clientName';
+				connect.handshakeHandler( socket, data );
 
-				expect( Game.event_queue.queue[ Game.event_queue.middle ] ).to.have.lengthOf( 1 );
-				expect( connect.connecting_players.size ).to.be.equal( 1 );
+				expect( Game.eventQueue.queue[ Game.eventQueue.middle ] ).to.have.lengthOf( 1 );
+				expect( connect.connectingPlayers.size ).to.be.equal( 1 );
 			} );
 		} );
 	} );
 
-	describe( '#disconnect_handler()', function ()
+	describe( '#disconnectHandler()', function ()
 	{
 		describe( 'When called', function ()
 		{
 			it( 'should add 2 remove functions to the event queue', function ()
 			{
-				connect.disconnect_handler( socket );
+				connect.disconnectHandler( socket );
 
-				expect( Game.event_queue.queue[ Game.event_queue.middle ] ).to.have.lengthOf( 2 );
+				expect( Game.eventQueue.queue[ Game.eventQueue.middle ] ).to.have.lengthOf( 2 );
 			} );
 		} );
 	} );
 
-	describe( '#event_handler()', function ()
+	describe( '#eventHandler()', function ()
 	{
 		describe( 'When called with 5 types of BSON encoded events', function ()
 		{
@@ -77,11 +77,11 @@ describe( 'Connect', function ()
 					l: 0,
 					r: 0
 				};
-				Game.game_map.spawn_tank( 0 );
-				connect.event_handler( socket, data );
+				Game.gameMap.spawnTank( 0 );
+				connect.eventHandler( socket, data );
 
-				expect( Game.event_queue.queue[ Game.event_queue.middle ] ).to.have.lengthOf( 5 );
-				// console.log( Game.event_queue.queue );
+				expect( Game.eventQueue.queue[ Game.eventQueue.middle ] ).to.have.lengthOf( 5 );
+				// console.log( Game.eventQueue.queue );
 			} );
 		} );
 	} );

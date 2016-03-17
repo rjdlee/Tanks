@@ -1,42 +1,71 @@
-class Event_Class
+/**
+ * Provides publish and subscribe functionality between modules
+ */
+class EventClass
 {
 	constructor()
 	{
+		/**
+		 * Holds each event and its listening functions
+		 *
+		 * @private
+		 */
 		this.events = new Map();
 	}
 
-	// Create a new event if it doesn't already exist
-	new_event( event_name )
+	/** 
+	 * Create a new event if it doesn't already exist
+	 *
+	 * @private
+	 */
+	newEvent( eventName )
 	{
-		if ( this.events.has( event_name ) )
+		if ( this.events.has( eventName ) )
 			return false;
 
-		this.events.set( event_name, new Array() );
+		this.events.set( eventName, new Array() );
 		return true;
 	}
 
-	// Send an event and call the listening functions with the event data
-	publish( event_name, event_data )
+	/**
+	 * Call each function listening to the event
+	 *
+	 * @public
+	 * @param {String} eventName - Name of the event to listen to
+	 * @param {Object} value - Argument to send to listening functions
+	 */
+	publish( eventName, eventData )
 	{
-		if ( this.new_event( event_name ) )
+		if ( this.newEvent( eventName ) )
 			return;
 
-		let e = this.events.get( event_name );
+		let e = this.events.get( eventName );
 		for ( let func of e )
 		{
-			func( event_data );
+			func( eventData );
 		}
 	}
 
-	// Call the given function when an event occurs
-	subscribe( event_name, func )
+	/**
+	 * Add a listener for an event
+	 *
+	 * @public
+	 * @param {String} eventName - Name of the event to listen to
+	 * @param {Function} func - Function to be called when the event occurs
+	 */
+	subscribe( eventName, func )
 	{
-		this.new_event( event_name )
+		this.newEvent( eventName )
 
-		let e = this.events.get( event_name );
+		let e = this.events.get( eventName );
 		e.push( func );
 	}
 }
 
-let Event = new Event_Class();
+/**
+ * Singleton of event class to maintain state across modules
+ *
+ * @public
+ */
+let Event = new EventClass();
 export default Event;
