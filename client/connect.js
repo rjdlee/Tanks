@@ -28,7 +28,7 @@ function Connect() {
   // Attempt different servers if failed to connect to this one
   this.socket.on('connect_error', function() {
     if (this.socket.io.uri === 'http://localhost:8888')
-      this.socket.io.uri = 'https://tank.rjdlee.com:8888';
+      this.socket.io.uri = 'http://tank.rjdlee.com';
     else
       this.socket.io.uri = 'http://localhost:8888';
   }.bind(this));
