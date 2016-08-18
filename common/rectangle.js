@@ -239,121 +239,69 @@ Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
 
 // Rough collision approximation to check if rectangle is close to the polygon
 Rectangle.prototype.isRadiusCollision = function(polygon, radius) {
+
   // If no radius, use the combinaed radii plus a bit more
-  if (!radius)
+  if (!radius) {
     radius = this.radius + polygon.radius + 20;
+  }
 
-  if (sqrtApprox(polygon.pos.x - this.pos.x, polygon.pos.y - this.pos.y) <= radius)
+  var hypot = Math.pow(polygon.pos.x - this.pos.x, 2) + Math.pow(polygon.pos.y - this.pos.y, 2);
+  if (hypot <= Math.pow(radius, 2)) {
     return true;
-
-  return false;
-};
-
-// Determine if there is a collision with the array of unrotated rectangles
-Rectangle.prototype.isRectangleCollision = function(rectangles) {
-  var boundingBox = this.boundingBox;
-
-  // Iterate through the map rectangles
-  for (var id in rectangles) {
-    if (!this.isRadiusCollision(rectangles[id]))
-      continue;
-
-    var wallBoundingBox = rectangles[id].boundingBox;
-
-    // Iterate through the bounds of this
-    for (var i = 0; i < boundingBox.length - 2; i++) {
-      var bound = boundingBox[i],
-
-        // Calculate the overlaps of the x and y position of the wall and bound
-        overlaps = [
-          bound.y - wallBoundingBox[0].y,
-          bound.x - wallBoundingBox[1].x,
-          bound.y - wallBoundingBox[2].y,
-          bound.x - wallBoundingBox[3].x
-        ];
-
-      // If the bound is contained within the wall
-      if (overlaps[0] <= 0 && overlaps[1] >= 0 && overlaps[2] >= 0 && overlaps[3] <= 0) {
-        var edges = rectangles[id].edges,
-          edge = 0,
-          overlap = -overlaps[0];
-
-        // Find the side of least overlap
-        for (var i = 1; i < 4; i++) {
-          if (Math.abs(overlaps[i]) < Math.abs(overlap)) {
-            edge = i;
-            overlap = -overlaps[i];
-          }
-        }
-
-        edge = {
-          x: Math.sign(edges[edge].x),
-          y: Math.sign(edges[edge].y)
-        };
-
-        return [edge, overlap, id];
-      }
-    }
   }
 
   return false;
 };
 
-// Returns false if there is no collision
+/**
+ * Find a collision between two polygons
+ *
+ * @returns {Vector2} - 2D minimum translation vector to resolve collision
+ */
 Rectangle.prototype.isRotatedRectangleCollision = function(polygon) {
+
+  if (!this.isRadiusCollision(polygon)) {
+    return;
+  }
+
+  // Axis with the smallest amount of overlap is the minimum translation vector
   var overlap = Infinity;
   var smallest;
-  var edges1 = this.edges;
-  var edges2 = polygon.edges;
 
-  // Parallel edges of rectangle do not need to be checked
-  var edges1Length = edges1.length === 4 ? 2 : edges1.length;
-  for (var i = 0; i < edges1Length; i++) {
-    var axis = getUnitVector(normal(edges1[i]));
+  // Parallel edges of a rectangle are redundant so no need to check them
+  var edges1 = this.edges.length === 4 ? this.edges.slice(0, 2) : this.edges;
+  var edges2 = polygon.edges.length === 4 ? polygon.edges.slice(0, 2) : polygon.edges;
+  var edges = edges1.concat(edges2);
 
-    // project both shapes onto the axis
+  for (var i = 0; i < edges.length; i++) {
+
+    // Normalized normal of the edge
+    var axis = getUnitVector(normal(edges[i]));
+
+    // Project both polygons onto the axis
     var p1 = projectPolygon(this, axis);
     var p2 = projectPolygon(polygon, axis);
 
     // Check if projections overlap
     if (!overlapProjections(p1, p2)) {
-      // Then we can guarantee that the shapes do not overlap
-      return false;
+
+      // Guaranteed to not overlap if projections don't overlap
+      return;
+
     } else {
+
+      // Amount of overlap between p1 and p2
       var o = getOverlapProjections(p1, p2);
 
-      // check for minimum
+      // Check for minimum
       if (o < overlap) {
-        // then set this one as the smallest
+        // Then set this one as the smallest
         overlap = o;
         smallest = axis;
       }
+
     }
-  }
 
-  // loop over the axes2
-  var edges2Length = edges2.length === 4 ? 2 : edges2.length;
-  for (var i = 0; i < edges2Length; i++) {
-    var axis = getUnitVector(normal(edges2[i]));
-
-    // Project both shapes onto the axis
-    var p1 = projectPolygon(this, axis);
-    var p2 = projectPolygon(polygon, axis);
-
-    // Check if projections overlap
-    if (!overlapProjections(p1, p2)) {
-      // Then we can guarantee that the shapes do not overlap
-      return false;
-    } else {
-      var o = getOverlapProjections(p1, p2);
-
-      // check for minimum
-      if (o < overlap) {
-        // then set this one as the smallest
-        overlap = o;
-        smallest = axis;
-      }
-    }
   }
 
   // No collision

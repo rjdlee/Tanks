@@ -93,22 +93,13 @@ Tank.prototype.rotate = function(boundX, boundY, walls, players) {
     this.setAngle(this.angle.rad + this.angle.speed);
 
   // Rotate off of walls
-  var unitVector = this.isRectangleCollision(walls);
-  if (unitVector) {
-    var displacementVector = {
-      x: unitVector[1] * unitVector[0].y,
-      y: unitVector[1] * unitVector[0].x
-    };
+  for (var id in walls) {
+    var wall = walls[id];
 
-    if (unitVector[0].x < 0)
-      displacementVector.y = -displacementVector.y;
-
-    if (unitVector[0].y < 0)
-      displacementVector.x = -displacementVector.x;
-
-    this.movePos(displacementVector.x, displacementVector.y);
-
-    return true;
+    var mtv = this.isRotatedRectangleCollision(wall);
+    if (mtv) {
+      this.movePos(mtv.x, mtv.y);
+    }
   }
 
   // Check for collisions with other tanks and cancel velocity in the direction of the tank
