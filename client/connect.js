@@ -2,11 +2,11 @@
 
 Note the mapping for sending keydown and keyup is as follows:
 
-		keydown		keyup
-Up 		0			4	
-Down 	1			5
-Left 	2			6
-Right	3			7
+    keydown   keyup
+Up    0     4 
+Down  1     5
+Left  2     6
+Right 3     7
 
 */
 
@@ -39,15 +39,17 @@ function Connect() {
 // Add an event to the queue to be sent to the server
 Connect.prototype.pushStateEvent = function(key, data) {
   this.stateQueue[key] = data;
-  if (map)
+  if (map) {
     this.tickQueue[key] = map.ticker;
+  }
   this.stateChange = true;
 };
 
 // Send the queue of events to the server
 Connect.prototype.sendStateQueue = function() {
-  if (!this.stateChange)
+  if (!this.stateChange) {
     return false;
+  }
 
   this.socket.emit('e', this.stateQueue);
 
@@ -132,10 +134,20 @@ function eventHandler(changeQueue) {
         projectile = new Projectile(id, projectileRef.pos.x, projectileRef.pos.y, projectileRef.angle,
           0);
 
-      projectile.velocity = projectileRef.velocity;
+      projectile.velocity.set(projectileRef.velocity.x, projectileRef.velocity.y);
 
       player.projectiles.push(projectile);
       map.projectiles[projectile.id] = projectile;
+    }
+
+    if ('mine' in playerChanges) {
+      var mineRef = playerChanges.mine;
+      var mine = new Mine(id, mineRef.pos.x, mineRef.pos.y);
+      console.log(mineRef.pos);
+      console.log(player.pos);
+
+      player.mines.push(mine);
+      map.mines[mine.id] = mine;
     }
 
     if ('score' in playerChanges) {

@@ -8,10 +8,7 @@ Extends: Rectangle
 function Tank(x, y, angle) {
   // Extend the Rectangle class
   Rectangle.call(this, {
-    pos: {
-      x: x,
-      y: y
-    },
+    pos: new Vector2(x, y),
     width: 50,
     height: 25,
     transform: {
@@ -21,6 +18,7 @@ function Tank(x, y, angle) {
 
   this.barrel = new TankBarrel(x, y);
   this.projectiles = [];
+  this.mines = [];
 }
 
 Tank.prototype = Object.create(Rectangle.prototype);
@@ -40,42 +38,42 @@ Tank.prototype.movePos = function(x, y) {
 
 // Translate by current velocity; uses speed and velocity for translation
 Tank.prototype.translate = function(boundX, boundY, walls, players) {
-  // Don't perform any transforms if there is no speed
-  if (!this.speed) {
+
+  // No speed means no move
+  if (this.speed) {
+    this.movePos(this.velocity.x, this.velocity.y);
+  }
+
+  if (this.angle.speed) {
+    // Reset angle when it goes over 2π, otherwise increment it by speed
+    if (Math.abs(this.angle) >= 6.283185) {
+      this.setAngle(0);
+    } else {
+      this.setAngle(this.angle.rad + this.angle.speed);
+    }
+  }
+
+  if (!this.speed && !this.angle.speed) {
     return false;
   }
 
+  // Check for collisions with walls
   for (var id in walls) {
     var wall = walls[id];
 
     var mtv = this.isRotatedRectangleCollision(wall);
     if (mtv) {
       this.movePos(mtv.x, mtv.y);
+      collision = true;
     }
   }
-  // var unitVector = this.isRotatedRectangleCollision(walls);
-  // if (unitVector) {
-  //   unitVector = unitVector[0];
-  //   // Move by the velocity projected onto the unit vector 
-  //   var dotProduct = this.velocity.x * unitVector.x + this.velocity.y * unitVector.y;
-  //   this.movePos(dotProduct * unitVector.x, dotProduct * unitVector.y);
-
-  //   return true;
-  // }
 
   // Check for collisions with other tanks and cancel velocity in the direction of the tank
   unitVector = this.isTankCollision(players);
   if (unitVector) {
     this.movePos(unitVector.x, unitVector.y);
-    // Move by the velocity projected onto the unit vector 
-    // var dotProduct = this.velocity.x * unitVector.x + this.velocity.y * unitVector.y;
-    // this.movePos(dotProduct * unitVector.x, dotProduct * unitVector.y);
-
-    return true;
+    collision = true;
   }
-
-  // If no collisions, increment the speed by velocity
-  this.movePos(this.velocity.x, this.velocity.y);
 
   return true;
 };
@@ -83,49 +81,68 @@ Tank.prototype.translate = function(boundX, boundY, walls, players) {
 // Convenience method for rotate; uses angle.speed for rotation
 Tank.prototype.rotate = function(boundX, boundY, walls, players) {
   // Don't perform any transforms if there is no radial velocity
-  if (!this.angle.speed)
-    return false;
+  // if (!this.angle.speed)
+  //   return false;
 
-  // Reset angle when it goes over 2π, otherwise increment it by speed
-  if (Math.abs(this.angle) >= 6.283185)
-    this.setAngle(0);
-  else
-    this.setAngle(this.angle.rad + this.angle.speed);
+  // // Reset angle when it goes over 2π, otherwise increment it by speed
+  // if (Math.abs(this.angle) >= 6.283185)
+  //   this.setAngle(0);
+  // else
+  //   this.setAngle(this.angle.rad + this.angle.speed);
 
-  // Rotate off of walls
-  for (var id in walls) {
-    var wall = walls[id];
+  // // Rotate off of walls
+  // for (var id in walls) {
+  //   var wall = walls[id];
 
-    var mtv = this.isRotatedRectangleCollision(wall);
-    if (mtv) {
-      this.movePos(mtv.x, mtv.y);
-    }
-  }
+  //   var mtv = this.isRotatedRectangleCollision(wall);
+  //   if (mtv) {
+  //     this.movePos(mtv.x, mtv.y);
+  //   }
+  // }
 
-  // Check for collisions with other tanks and cancel velocity in the direction of the tank
-  var unitVector = this.isTankCollision(players);
-  if (unitVector) {
-    // Shift the position by the tangential velocity projected onto the unit vector
-    var tangentialVelocity = this.radius * this.angle.speed;
-    this.movePos(tangentialVelocity * unitVector.x, tangentialVelocity * unitVector.y);
+  // // Check for collisions with other tanks and cancel velocity in the direction of the tank
+  // var unitVector = this.isTankCollision(players);
+  // if (unitVector) {
+  //   // Shift the position by the tangential velocity projected onto the unit vector
+  //   var tangentialVelocity = this.radius * this.angle.speed;
+  //   this.movePos(tangentialVelocity * unitVector.x, tangentialVelocity * unitVector.y);
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  return true;
+  return;
 };
 
 // Fire a projectile from the end of barrel and return the reference
 Tank.prototype.shoot = function(projectiles) {
+
+  // Ensure barrel's bounding box is up to date
   this.barrel.rotateBoundingBox();
 
-  var projectile = new Projectile(this.id, this.barrel.boundingBox[2].x, this.barrel.boundingBox[
-    2].y, this.barrel.angle.rad);
+  var angle = this.barrel.angle.rad;
+  var x = this.barrel.edges[0].x * 1.1 + this.pos.x;
+  var y = this.barrel.edges[0].y * 1.1 + this.pos.y;
+  var projectile = new Projectile(this.id, x, y, this.barrel.angle.rad);
 
   projectiles[projectile.id] = projectile;
   this.projectiles.push(projectile);
 
   return projectile;
+};
+
+// Fire a projectile from the end of barrel and return the reference
+Tank.prototype.drop = function(mines) {
+
+  if (this.mines.length >= 2) {
+    return;
+  }
+
+  var mine = new Mine(this.id, this.pos.x, this.pos.y);
+
+  mines[mine.id] = mine;
+  this.mines.push(mine);
+
+  return mine;
 };
 
 // Returns true if there is a collision between this tank and a tank from players

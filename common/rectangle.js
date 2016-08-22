@@ -4,23 +4,21 @@ Core geometry class with collision detection and a bounding box with matrix tran
 
 */
 
+var Vector2 = Vector2;
+if (typeof window === 'undefined' && typeof require !== 'undefined') {
+  Vector2 = require('../common/vector2');
+
+  module.exports = Rectangle;
+}
+
 function Rectangle(config) {
   // Position relative to canvas context
-  this.pos = config && config.pos ? config.pos : {
-    x: 0,
-    y: 0
-  };
-  this.lastPos = {
-    x: 0,
-    y: 0
-  };
+  this.pos = config && config.pos ? config.pos : new Vector2();
+  this.lastPos = new Vector2(0, 0);
 
   // Speed is scalar, velocity is vector
   this.speed = 0;
-  this.velocity = {
-    x: 0,
-    y: 0
-  };
+  this.velocity = new Vector2(0, 0);
 
   // Total width and height
   this.width = config && config.width ? config.width : 0;
@@ -39,10 +37,7 @@ function Rectangle(config) {
   // The point for the rectangle to rotate around, if not an argument, set it to the center
   // Values are 0 to 1 where 0 is the top left
   var angleOrigin = config && config.transform && config.transform.origin ? config.transform.origin :
-    {
-      x: 0.5,
-      y: 0.5,
-    };
+    new Vector2(0.5, 0.5);
 
   // Information about the rotation
   this.angle = {
@@ -69,31 +64,26 @@ function Rectangle(config) {
 
 // Sets the rectangle's position to x and y and updates its bounding box
 Rectangle.prototype.setPos = function(x, y) {
-  this.lastPos.x = this.pos.x;
-  this.lastPos.y = this.pos.y;
-
-  this.pos.x = x;
-  this.pos.y = y;
+  this.lastPos.set(this.pos.x, this.pos.y);
+  this.pos.set(x, y);
 
   this.translateBoundingBox();
 };
 
 // Moves the rectangle's position by x and y and updates its bounding box
 Rectangle.prototype.movePos = function(x, y) {
-  this.lastPos.x = this.pos.x;
-  this.lastPos.y = this.pos.y;
-
-  this.pos.x += x;
-  this.pos.y += y;
+  this.lastPos.set(this.pos.x, this.pos.y);
+  this.pos.add(x, y);
 
   this.translateBoundingBox();
 };
 
 // Sets the rectangle's speed and velocity
 Rectangle.prototype.setVelocity = function(speed) {
+  this.velocity.set(this.angle.cos, this.angle.sin);
+  this.velocity.multiply(speed);
+
   this.speed = speed;
-  this.velocity.x = speed * this.angle.cos;
-  this.velocity.y = speed * this.angle.sin;
 };
 
 // Sets the rectangle's angle, direction of velocity, and updates its bounding box
