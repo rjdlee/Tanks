@@ -4,23 +4,21 @@ Core geometry class with collision detection and a bounding box with matrix tran
 
 */
 
+var Vector2 = Vector2;
+if (typeof window === 'undefined' && typeof require !== 'undefined') {
+  Vector2 = require('../common/vector2');
+
+  module.exports = Rectangle;
+}
+
 function Rectangle(config) {
   // Position relative to canvas context
-  this.pos = config && config.pos ? config.pos : {
-    x: 0,
-    y: 0
-  };
-  this.lastPos = {
-    x: 0,
-    y: 0
-  };
+  this.pos = config && config.pos ? config.pos : new Vector2();
+  this.lastPos = new Vector2(0, 0);
 
   // Speed is scalar, velocity is vector
   this.speed = 0;
-  this.velocity = {
-    x: 0,
-    y: 0
-  };
+  this.velocity = new Vector2(0, 0);
 
   // Total width and height
   this.width = config && config.width ? config.width : 0;
@@ -39,10 +37,7 @@ function Rectangle(config) {
   // The point for the rectangle to rotate around, if not an argument, set it to the center
   // Values are 0 to 1 where 0 is the top left
   var angleOrigin = config && config.transform && config.transform.origin ? config.transform.origin :
-    {
-      x: 0.5,
-      y: 0.5,
-    };
+    new Vector2(0.5, 0.5);
 
   // Information about the rotation
   this.angle = {
@@ -69,31 +64,26 @@ function Rectangle(config) {
 
 // Sets the rectangle's position to x and y and updates its bounding box
 Rectangle.prototype.setPos = function(x, y) {
-  this.lastPos.x = this.pos.x;
-  this.lastPos.y = this.pos.y;
-
-  this.pos.x = x;
-  this.pos.y = y;
+  this.lastPos.set(this.pos.x, this.pos.y);
+  this.pos.set(x, y);
 
   this.translateBoundingBox();
 };
 
 // Moves the rectangle's position by x and y and updates its bounding box
 Rectangle.prototype.movePos = function(x, y) {
-  this.lastPos.x = this.pos.x;
-  this.lastPos.y = this.pos.y;
-
-  this.pos.x += x;
-  this.pos.y += y;
+  this.lastPos.set(this.pos.x, this.pos.y);
+  this.pos.add(x, y);
 
   this.translateBoundingBox();
 };
 
 // Sets the rectangle's speed and velocity
 Rectangle.prototype.setVelocity = function(speed) {
+  this.velocity.set(this.angle.cos, this.angle.sin);
+  this.velocity.multiply(speed);
+
   this.speed = speed;
-  this.velocity.x = speed * this.angle.cos;
-  this.velocity.y = speed * this.angle.sin;
 };
 
 // Sets the rectangle's angle, direction of velocity, and updates its bounding box
@@ -111,8 +101,8 @@ Rectangle.prototype.setAngle = function(angle) {
 
 Rectangle.prototype.rotateBoundingBox = function() {
   // Use a rotation transform matrix: cos(θ) -sin(θ) 0
-  // 									sin(θ) cos(θ)  0
-  // 									0	   0	   1
+  //                  sin(θ) cos(θ)  0
+  //                  0    0     1
   var cos = this.angle.cos,
     sin = this.angle.sin,
     offsetWidth = this.angle.width + this.halfWidth,
@@ -239,169 +229,150 @@ Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
 
 // Rough collision approximation to check if rectangle is close to the polygon
 Rectangle.prototype.isRadiusCollision = function(polygon, radius) {
+
   // If no radius, use the combinaed radii plus a bit more
-  if (!radius)
+  if (!radius) {
     radius = this.radius + polygon.radius + 20;
+  }
 
-  if (sqrtApprox(polygon.pos.x - this.pos.x, polygon.pos.y - this.pos.y) <= radius)
+  var hypot = Math.pow(polygon.pos.x - this.pos.x, 2) + Math.pow(polygon.pos.y - this.pos.y, 2);
+  if (hypot <= Math.pow(radius, 2)) {
     return true;
-
-  return false;
-};
-
-// Determine if there is a collision with the array of unrotated rectangles
-Rectangle.prototype.isRectangleCollision = function(rectangles) {
-  var boundingBox = this.boundingBox;
-
-  // Iterate through the map rectangles
-  for (var id in rectangles) {
-    if (!this.isRadiusCollision(rectangles[id]))
-      continue;
-
-    var wallBoundingBox = rectangles[id].boundingBox;
-
-    // Iterate through the bounds of this
-    for (var i = 0; i < boundingBox.length - 2; i++) {
-      var bound = boundingBox[i],
-
-        // Calculate the overlaps of the x and y position of the wall and bound
-        overlaps = [
-          bound.y - wallBoundingBox[0].y,
-          bound.x - wallBoundingBox[1].x,
-          bound.y - wallBoundingBox[2].y,
-          bound.x - wallBoundingBox[3].x
-        ];
-
-      // If the bound is contained within the wall
-      if (overlaps[0] <= 0 && overlaps[1] >= 0 && overlaps[2] >= 0 && overlaps[3] <= 0) {
-        var edges = rectangles[id].edges,
-          edge = 0,
-          overlap = -overlaps[0];
-
-        // Find the side of least overlap
-        for (var i = 1; i < 4; i++) {
-          if (Math.abs(overlaps[i]) < Math.abs(overlap)) {
-            edge = i;
-            overlap = -overlaps[i];
-          }
-        }
-
-        edge = {
-          x: Math.sign(edges[edge].x),
-          y: Math.sign(edges[edge].y)
-        };
-
-        return [edge, overlap, id];
-      }
-    }
   }
 
   return false;
 };
 
-// Returns false if there is no collision
+/**
+ * Find a collision between two polygons
+ *
+ * @returns {Vector2} - 2D minimum translation vector to resolve collision
+ */
 Rectangle.prototype.isRotatedRectangleCollision = function(polygon) {
-  if (!this.isRadiusCollision(polygon))
-    return false;
 
-  var collisionA = isCollidingWith(this, polygon, true);
-  if (!collisionA[0])
-    return false;
+  if (!this.isRadiusCollision(polygon)) {
+    return;
+  }
 
-  var collisionB = isCollidingWith(polygon, this, false);
-  if (!collisionB[0])
-    return false;
+  // Axis with the smallest amount of overlap is the minimum translation vector
+  var overlap = Infinity;
+  var smallest;
 
-  var edge = polygon.edges[collisionB[2]],
-    edgeMagnitude = collisionB[2] === 0 | collisionB[2] === 2 ? 50 : 25,
-    edgeUnitVector = {
-      x: edge.x / edgeMagnitude,
-      y: edge.y / edgeMagnitude
-    };
-
-  return edgeUnitVector;
-};
-
-// Helper function for isCollision, finds if polygonA's edges collides with polygonB's vertices
-function isCollidingWith(polygonA, polygonB, isAMoving) {
-  // https://stackoverflow.com/questions/115426/algorithm-to-detect-intersection-of-two-rectangles?rq=1
-  // http://imgur.com/bNwrzsv
-
-  var edges = polygonA.edges,
-    leastOverlap = Infinity,
-    leastOverlapEdge = 0,
-
-    separatingAxis = false,
-    oppositeSides,
-    normal,
-
-    currentPoint,
-    nextPoint,
-
-    shapeVector,
-    shape1DotProduct,
-    shape1DotProductSign;
+  // Parallel edges of a rectangle are redundant so no need to check them
+  var edges1 = this.edges.length === 4 ? this.edges.slice(0, 2) : this.edges;
+  var edges2 = polygon.edges.length === 4 ? polygon.edges.slice(0, 2) : polygon.edges;
+  var edges = edges1.concat(edges2);
 
   for (var i = 0; i < edges.length; i++) {
-    oppositeSides = true;
 
-    normal = {
-      x: -edges[i].y,
-      y: edges[i].x
-    };
+    // Normalized normal of the edge
+    var axis = getUnitVector(normal(edges[i]));
 
-    currentPoint = polygonA.boundingBox[i];
-    nextPoint = i < 2 ? polygonA.boundingBox[i + 2] : polygonA.boundingBox[i - 2];
+    // Project both polygons onto the axis
+    var p1 = projectPolygon(this, axis);
+    var p2 = projectPolygon(polygon, axis);
 
-    shapeVector = {
-      x: nextPoint.x - currentPoint.x,
-      y: nextPoint.y - currentPoint.y
-    };
-    shape1DotProduct = shapeVector.x * normal.x + shapeVector.y * normal.y;
-    shape1DotProductSign = shape1DotProduct >= 0;
+    // Check if projections overlap
+    if (!overlapProjections(p1, p2)) {
 
-    var min = Infinity,
-      max = -Infinity;
-    for (var j = 0; j < 4; j++) {
-      nextPoint = polygonB.boundingBox[j];
+      // Guaranteed to not overlap if projections don't overlap
+      return;
 
-      shapeVector = {
-        x: nextPoint.x - currentPoint.x,
-        y: nextPoint.y - currentPoint.y,
-      };
+    } else {
 
-      var shape2DotProduct = shapeVector.x * normal.x + shapeVector.y * normal.y,
-        shape2DotProductSign = shape2DotProduct >= 0;
+      // Amount of overlap between p1 and p2
+      var o = getOverlapProjections(p1, p2);
 
-      if (shape2DotProductSign === shape1DotProductSign)
-        oppositeSides = false;
+      // Check for minimum
+      if (o < overlap) {
+        // Then set this one as the smallest
+        overlap = o;
+        smallest = axis;
+      }
 
-      if (shape2DotProduct < min)
-        min = shape2DotProduct;
-      else if (shape2DotProduct > max)
-        max = shape2DotProduct;
     }
 
-    if (oppositeSides) {
-      separatingAxis = true;
+  }
 
-      if (isAMoving)
-        break;
-    }
+  // No collision
+  if (typeof smallest === 'undefined') {
+    return;
+  }
 
-    var overlap;
-    if (min < shape1DotProduct)
-      overlap = max - shape1DotProduct;
-    else
-      overlap = max - min;
+  // Minimum translation vector
+  var mtv = getUnitVector(smallest);
+  mtv.x *= overlap;
+  mtv.y *= overlap;
 
-    if (overlap < leastOverlap) {
-      leastOverlap = overlap;
-      leastOverlapEdge = i;
+  // Distance between centers of both polygons  
+  var centerVector = {
+    x: polygon.pos.x - this.pos.x,
+    y: polygon.pos.y - this.pos.y,
+  };
+
+  // Reverse the direction of the mtv if needed
+  if (dotProduct(centerVector, mtv) >= 0) {
+    mtv.x *= -1;
+    mtv.y *= -1;
+  }
+
+  return mtv;
+};
+
+function projectPolygon(polygon, vector) {
+  var vertices = polygon.boundingBox;
+
+  var max = dotProduct(vector, vertices[0]);
+  var min = max;
+
+  for (var i = 1; i < vertices.length - 2; i++) {
+    var dp = dotProduct(vector, vertices[i]);
+
+    if (dp < min) {
+      min = dp;
+    } else if (dp > max) {
+      max = dp;
     }
   }
 
-  return [!separatingAxis, leastOverlap, leastOverlapEdge];
+  return [min, max];
+}
+
+function overlapProjections(projection1, projection2) {
+  var min1 = projection1[0];
+  var max1 = projection1[1];
+  var min2 = projection2[0];
+  var max2 = projection2[1];
+
+  return !(min1 > max2 || min2 > max1);
+}
+
+function getOverlapProjections(projection1, projection2) {
+  var min1 = projection1[0];
+  var max1 = projection1[1];
+  var min2 = projection2[0];
+  var max2 = projection2[1];
+
+  return Math.min(max1, max2) - Math.max(min1, min2);
+}
+
+function normal(vector) {
+  return {
+    x: -vector.y,
+    y: vector.x,
+  };
+}
+
+function dotProduct(vectorA, vectorB) {
+  return vectorA.x * vectorB.x + vectorA.y * vectorB.y;
+}
+
+function getUnitVector(vector) {
+  var length = vector.x * vector.x + vector.y * vector.y;
+  return {
+    x: vector.x * vector.x / length,
+    y: vector.y * vector.y / length,
+  };
 }
 
 // Efficient approximation for the square root of a and b
