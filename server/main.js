@@ -110,7 +110,6 @@ function playerEventHandler(e) {
   var id = this.id,
     playerLog = id in stateQueue ? stateQueue[id] : new Object(),
     player = map.players[id];
-  console.log(e);
 
   if (!player)
     return;

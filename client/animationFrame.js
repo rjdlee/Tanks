@@ -39,7 +39,7 @@ window.requestAnimFrame = (function() {
   // window.webkitRequestAnimationFrame ||
   // window.mozRequestAnimationFrame ||
   return function(callback) {
-    window.setTimeout(callback, 100);
-    // window.setTimeout( callback, 1000 / 60 );
+    // window.setTimeout(callback, 100);
+    window.setTimeout(callback, 1000 / 60);
   };
 })();

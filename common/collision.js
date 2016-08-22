@@ -6,13 +6,16 @@ var Vector2 = Vector2;
 if (typeof window === 'undefined' && typeof require !== 'undefined') {
   Vector2 = require('../common/vector2');
 
-  module.exports = Collision;
+  module.exports = new CollisionClass();
 }
 
-function Collision() {}
+// Export a singleton
+var Collision = new CollisionClass();
+
+function CollisionClass() {}
 
 // Rough collision approximation to check if rectangle is close to the polygon
-Collision.prototype.near = function(polygon1, polygon2, radius) {
+CollisionClass.prototype.near = function(polygon1, polygon2, radius) {
 
   // If no radius, use the combinaed radii plus a bit more
   if (!radius) {
@@ -34,7 +37,7 @@ Collision.prototype.near = function(polygon1, polygon2, radius) {
  *
  * @returns {Vector2} - 2D minimum translation vector to resolve collision
  */
-Collision.prototype.detect = function(polygon1, polygon2) {
+CollisionClass.prototype.detect = function(polygon1, polygon2) {
 
   if (!this.near(polygon1, polygon2)) {
     return;

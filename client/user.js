@@ -87,7 +87,6 @@ function leftClickListener(e) {
   }
 
   if (rightclick) {
-    console.log(this.pos);
     connect.pushStateEvent('rightclick', 0);
   } else {
     connect.pushStateEvent('mousedown', this.barrel.angle.rad);
