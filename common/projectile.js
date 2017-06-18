@@ -78,6 +78,7 @@ Projectile.prototype.translate = function(map) {
     if (typeof mtv !== 'undefined') {
       if (!this.bounce(mtv)) {
         map.removeProjectile(this.id);
+        return;
       }
     }
   }
@@ -86,7 +87,7 @@ Projectile.prototype.translate = function(map) {
 
     // Don't collide with itself
     if (id === this.id) {
-      return;
+      break;
     }
 
     var projectile = map.projectiles[id];
@@ -95,20 +96,24 @@ Projectile.prototype.translate = function(map) {
     if (typeof mtv !== 'undefined') {
       map.removeProjectile(this.id);
       map.removeProjectile(id);
+      return;
     }
   }
 
   // Bullet collide with tanks
   for (var id in map.players) {
-    if (this.isRotatedRectangleCollision(map.players[id])) {
-      map.removeProjectile(this.id);
+    const player = map.players[id];
+    var collision = this.isRotatedRectangleCollision(player);
+    if(!collision) {
+      continue;
+    }
 
-      if (collision in map.players) {
-        // The user object has a key attribute, but the player does not.
-        // Only send the event if the user is hit
-        if ('key' in map.players[collision])
-          connect.pushStateEvent('hit', this.pid);
-      }
+    map.removeProjectile(this.id);
+
+    // The user object has a key attribute, but the player does not.
+    // Only send the event if the user is hit
+    if ('key' in player) {
+      connect.pushStateEvent('hit', this.pid);
     }
   }
 };

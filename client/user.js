@@ -95,8 +95,6 @@ function leftClickListener(e) {
 
 function rightClickListener(e) {
   e.preventDefault();
-  // console.log('event');
-  // connect.pushStateEvent('rightclick');
   return false;
 }
 

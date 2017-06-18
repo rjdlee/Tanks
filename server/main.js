@@ -17,7 +17,7 @@ module.exports = function(io) {
   init();
 
   function init() {
-    setInterval(draw, 1000 / 60);
+    setInterval(draw, 1000 / 10);
   }
 
   function draw() {
@@ -130,7 +130,7 @@ function playerEventHandler(e) {
   }
 
   if ('mousedown' in e) {
-    var projectile = player.shoot(map.projectiles);
+    var projectile = player.shoot(map);
     if (projectile) {
       playerLog.projectile = {
         pos: projectile.pos,
@@ -142,8 +142,6 @@ function playerEventHandler(e) {
 
   if ('rightclick' in e) {
     var mine = player.drop(map.mines);
-    console.log(mine.pos);
-    console.log(player.pos);
     if (mine) {
       playerLog.mine = {
         pos: mine.pos

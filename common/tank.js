@@ -39,9 +39,19 @@ Tank.prototype.movePos = function(x, y) {
 // Translate by current velocity; uses speed and velocity for translation
 Tank.prototype.translate = function(boundX, boundY, walls, players) {
 
+    const offsetMagnitude = this.offset.magnitude() / 10;
+    const offsetAngle = Math.atan2(this.offset.y, this.offset.x) || 0;
+    const offsetX = offsetMagnitude * Math.cos(offsetAngle);
+    const offsetY = offsetMagnitude * Math.sin(offsetAngle);
+
   // No speed means no move
-  if (this.speed) {
-    this.movePos(this.velocity.x, this.velocity.y);
+  if (this.speed || Math.abs(offsetX) > 0.5 || Math.abs(offsetY) > 0.5) {
+    this.offset.x -= offsetX;
+    this.offset.y -= offsetY;
+
+    const deltaX = this.velocity.x + offsetX;
+    const deltaY = this.velocity.y + offsetY;
+    this.movePos(deltaX, deltaY);
   }
 
   if (this.angle.speed) {

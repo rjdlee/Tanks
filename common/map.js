@@ -58,8 +58,6 @@ Map.prototype.removeProjectile = function(id) {
 Map.prototype.removeMine = function(id) {
   var mine = this.mines[id];
 
-  console.log(mine);
-
   if (id in this.mines) {
     delete this.mines[id];
   }

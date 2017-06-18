@@ -121,12 +121,18 @@ function eventHandler(changeQueue) {
 
     if ('pos' in playerChanges) {
       if (id === user.id) {
-        if (playerChanges.hit || Math.pow(playerChanges.pos.x - player.pos.x, 2) + Math.pow(
-            playerChanges.pos.y - player.pos.y, 2) > 50)
-          player.setPos(playerChanges.pos.x, playerChanges.pos.y);
+          if (playerChanges.hit) {
+              player.setPos(playerChanges.pos.x, playerChanges.pos.y);
+          } else {
+              var newX = playerChanges.pos.x;
+              var newY = playerChanges.pos.y;
+              player.offset = player.pos.to(new Vector2(newX, newY));
+          }
+
         player.camera.translate(player.pos.x, player.pos.y, map.width, map.height);
-      } else
+      } else {
         player.setPos(playerChanges.pos.x, playerChanges.pos.y);
+      }
     }
 
     if ('projectile' in playerChanges) {
@@ -143,8 +149,6 @@ function eventHandler(changeQueue) {
     if ('mine' in playerChanges) {
       var mineRef = playerChanges.mine;
       var mine = new Mine(id, mineRef.pos.x, mineRef.pos.y);
-      console.log(mineRef.pos);
-      console.log(player.pos);
 
       player.mines.push(mine);
       map.mines[mine.id] = mine;

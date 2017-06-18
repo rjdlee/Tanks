@@ -15,6 +15,7 @@ function Rectangle(config) {
   // Position relative to canvas context
   this.pos = config && config.pos ? config.pos : new Vector2();
   this.lastPos = new Vector2(0, 0);
+  this.offset = new Vector2(0, 0);
 
   // Speed is scalar, velocity is vector
   this.speed = 0;
@@ -248,7 +249,7 @@ Rectangle.prototype.isRadiusCollision = function(polygon, radius) {
  *
  * @returns {Vector2} - 2D minimum translation vector to resolve collision
  */
-Rectangle.prototype.isRotatedRectangleCollision = function(polygon) {
+  Rectangle.prototype.isRotatedRectangleCollision = function(polygon) {
 
   if (!this.isRadiusCollision(polygon)) {
     return;

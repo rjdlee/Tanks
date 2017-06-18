@@ -75,8 +75,6 @@ PlayerRef.prototype.setPosWarp = function(pos, map) {
 
   // dPosSpeed = dPos / dTick;
 
-  // console.log(dPosSpeed, dPos, dTick);
-
   // Use server generated position if the client position seems off
   // if ( dPosSpeed > 1.6 )
   // return false;
@@ -123,8 +121,9 @@ PlayerRef.prototype.setHeading = function(angle) {
 };
 
 PlayerRef.prototype.shoot = function(map) {
-  if (map.ticker - this.lastShotTick < 20)
-    return false;
+  if (map.ticker - this.lastShotTick < 3) {
+      return false;
+  }
 
   var projectile = Player.prototype.shoot.call(this, this.projectiles);
   this.ref.projectiles.push(projectile);
