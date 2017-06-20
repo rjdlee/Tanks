@@ -141,3 +141,11 @@ Vector2.prototype.rightNormal = function() {
 Vector2.prototype.leftNormal = function() {
   return new Vector2(this.y, -this.x);
 };
+
+Vector2.prototype.unitVector = function() {
+  const length = this.x * this.x + this.y * this.y;
+  const x = this.x * this.x / length;
+  const y = this.y * this.y / length;
+
+  return new Vector2(x, y);
+};

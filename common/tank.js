@@ -5,10 +5,12 @@ Extends: Rectangle
 
 */
 
+var Collision = Collision;
 var Vector2 = Vector2;
 var Rectangle = Rectangle;
 var TankBarrel = TankBarrel;
 if (typeof require !== 'undefined') {
+    Collision = require('./rectangle');
     Rectangle = require('./rectangle');
     TankBarrel = require('./tankBarrel');
     Vector2 = require('../common/vector2');

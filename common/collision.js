@@ -2,20 +2,20 @@
  * Collision detection
  */
 
+// Export a singleton
+var Collision = new CollisionBase();
+
 var Vector2 = Vector2;
 if (typeof require !== 'undefined') {
   Vector2 = require('../common/vector2');
 
-  module.exports = new CollisionClass();
+  module.exports = Collision;
 }
 
-// Export a singleton
-var Collision = new CollisionClass();
-
-function CollisionClass() {}
+function CollisionBase() {}
 
 // Rough collision approximation to check if rectangle is close to the polygon
-CollisionClass.prototype.near = function(polygon1, polygon2, radius) {
+CollisionBase.prototype.near = function(polygon1, polygon2, radius) {
 
   // If no radius, use the combinaed radii plus a bit more
   if (!radius) {
@@ -37,7 +37,7 @@ CollisionClass.prototype.near = function(polygon1, polygon2, radius) {
  *
  * @returns {Vector2} - 2D minimum translation vector to resolve collision
  */
-CollisionClass.prototype.detect = function(polygon1, polygon2) {
+CollisionBase.prototype.detect = function(polygon1, polygon2) {
 
   if (!this.near(polygon1, polygon2)) {
     return;
@@ -55,7 +55,7 @@ CollisionClass.prototype.detect = function(polygon1, polygon2) {
   for (var i = 0; i < edges.length; i++) {
 
     // Normalized normal of the edge
-    var axis = getUnitVector(normal(edges[i]));
+    var axis = edges[i].rightNormal().unitVector();
 
     // Project both polygons onto the axis
     var p1 = projectPolygon(polygon1, axis);
@@ -67,7 +67,7 @@ CollisionClass.prototype.detect = function(polygon1, polygon2) {
       // Guaranteed to not overlap if projections don't overlap
       return;
 
-    } else {
+    }
 
       // Amount of overlap between p1 and p2
       var o = getOverlapProjections(p1, p2);
@@ -78,9 +78,6 @@ CollisionClass.prototype.detect = function(polygon1, polygon2) {
         overlap = o;
         smallest = axis;
       }
-
-    }
-
   }
 
   // No collision
@@ -89,21 +86,54 @@ CollisionClass.prototype.detect = function(polygon1, polygon2) {
   }
 
   // Minimum translation vector
-  var mtv = getUnitVector(smallest);
+  var mtv = smallest.unitVector();
   mtv.x *= overlap;
   mtv.y *= overlap;
 
   // Distance between centers of both polygons  
-  var centerVector = {
-    x: polygon2.pos.x - polygon1.pos.x,
-    y: polygon2.pos.y - polygon1.pos.y,
-  };
+  var centerVector = new Vector2(polygon2.pos.x - polygon1.pos.x, polygon2.pos.y - polygon1.pos.y);
 
   // Reverse the direction of the mtv if needed
-  if (dotProduct(centerVector, mtv) >= 0) {
+  if (centerVector.dot(mtv) >= 0) {
     mtv.x *= -1;
     mtv.y *= -1;
   }
 
   return mtv;
 };
+
+function overlapProjections(projection1, projection2) {
+    var min1 = projection1[0];
+    var max1 = projection1[1];
+    var min2 = projection2[0];
+    var max2 = projection2[1];
+
+    return !(min1 > max2 || min2 > max1);
+}
+
+function getOverlapProjections(projection1, projection2) {
+    var min1 = projection1[0];
+    var max1 = projection1[1];
+    var min2 = projection2[0];
+    var max2 = projection2[1];
+
+    return Math.min(max1, max2) - Math.max(min1, min2);
+}
+
+function projectPolygon(polygon, vector) {
+    var vertices = polygon.boundingBox;
+
+    var max = vector.dot(vertices[0]);
+    var min = max;
+
+    for (var i = 1; i < vertices.length; i++) {
+        var dp = vector.dot(vertices[i]);
+        if (dp < min) {
+            min = dp;
+        } else if (dp > max) {
+            max = dp;
+        }
+    }
+
+    return [min, max];
+}

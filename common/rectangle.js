@@ -5,8 +5,10 @@ Core geometry class with collision detection and a bounding box with matrix tran
 */
 
 var Vector2 = Vector2;
+var Collision = Collision;
 if (typeof require !== 'undefined') {
   Vector2 = require('../common/vector2');
+    Collision = require('./collision');
 
   module.exports = Rectangle;
 }
@@ -15,7 +17,7 @@ function Rectangle(config) {
   config = config || {};
 
   // Position relative to canvas context
-  this.pos = config.pos || new Vector2();
+  this.pos = config.pos ? new Vector2(config.pos.x, config.pos.y) : new Vector2(0, 0);
   this.lastPos = new Vector2(0, 0);
   this.offset = new Vector2(0, 0);
 
@@ -35,6 +37,7 @@ function Rectangle(config) {
   this.radius = Math.sqrt(Math.pow(this.halfWidth, 2) + Math.pow(this.halfHeight, 2));
 
   this.boundingBox = [];
+  this.boundingBoxBounds = [];
   this.edges = [];
 
   // The point for the rectangle to rotate around, if not an argument, set it to the center
@@ -114,59 +117,59 @@ Rectangle.prototype.rotateBoundingBox = function() {
     offsetHeightMinus = -this.halfHeight + this.angle.height;
 
   // After applying the matrix, translate the shape to its (x,y) position
-  this.boundingBox[0] = {
-    x: offsetWidth * cos - offsetHeight * sin + this.pos.x,
-    y: offsetWidth * sin + offsetHeight * cos + this.pos.y
-  };
-  this.boundingBox[1] = {
-    x: offsetWidthMinus * cos - offsetHeight * sin + this.pos.x,
-    y: offsetWidthMinus * sin + offsetHeight * cos + this.pos.y
-  };
-  this.boundingBox[2] = {
-    x: offsetWidthMinus * cos - offsetHeightMinus * sin + this.pos.x,
-    y: offsetWidthMinus * sin + offsetHeightMinus * cos + this.pos.y
-  };
-  this.boundingBox[3] = {
-    x: offsetWidth * cos - offsetHeightMinus * sin + this.pos.x,
-    y: offsetWidth * sin + offsetHeightMinus * cos + this.pos.y
-  };
+  this.boundingBox[0] = new Vector2(
+    offsetWidth * cos - offsetHeight * sin + this.pos.x,
+    offsetWidth * sin + offsetHeight * cos + this.pos.y
+  );
+  this.boundingBox[1] = new Vector2(
+    offsetWidthMinus * cos - offsetHeight * sin + this.pos.x,
+    offsetWidthMinus * sin + offsetHeight * cos + this.pos.y
+  );
+  this.boundingBox[2] = new Vector2(
+    offsetWidthMinus * cos - offsetHeightMinus * sin + this.pos.x,
+    offsetWidthMinus * sin + offsetHeightMinus * cos + this.pos.y
+  );
+  this.boundingBox[3] = new Vector2(
+    offsetWidth * cos - offsetHeightMinus * sin + this.pos.x,
+    offsetWidth * sin + offsetHeightMinus * cos + this.pos.y
+  );
 
   this.updateEdges();
   this.updateBounds();
 };
 
 Rectangle.prototype.translateBoundingBox = function() {
-  var deltaX = this.pos.x - this.lastPos.x,
-    deltaY = this.pos.y - this.lastPos.y;
+  var deltaX = this.pos.x - this.lastPos.x;
+  var deltaY = this.pos.y - this.lastPos.y;
 
-  for (var i = 0; i < this.boundingBox.length - 2; i++) {
-    this.boundingBox[i].x += deltaX;
-    this.boundingBox[i].y += deltaY;
+  for (var i = 0; i < this.boundingBox.length; i++) {
+    this.boundingBox[i].add(deltaX, deltaY);
   }
 
   this.updateEdges();
+  // No need to update bounds since those are passed by reference
 };
 
 // Apply rotation and translation offsets to the bounding box
 // 0: Bottom Right, 1: Bottom Left, 2: Top Left, 3: Top Right
 Rectangle.prototype.updateEdges = function() {
   // Determine the edges of the shape
-  this.edges[0] = {
-    x: this.boundingBox[1].x - this.boundingBox[0].x,
-    y: this.boundingBox[1].y - this.boundingBox[0].y
-  };
-  this.edges[1] = {
-    x: this.boundingBox[2].x - this.boundingBox[1].x,
-    y: this.boundingBox[2].y - this.boundingBox[1].y
-  };
-  this.edges[2] = {
-    x: this.boundingBox[3].x - this.boundingBox[2].x,
-    y: this.boundingBox[3].y - this.boundingBox[2].y
-  };
-  this.edges[3] = {
-    x: this.boundingBox[0].x - this.boundingBox[3].x,
-    y: this.boundingBox[0].y - this.boundingBox[3].y
-  };
+  this.edges[0] = new Vector2(
+    this.boundingBox[1].x - this.boundingBox[0].x,
+    this.boundingBox[1].y - this.boundingBox[0].y
+    );
+  this.edges[1] = new Vector2(
+    this.boundingBox[2].x - this.boundingBox[1].x,
+    this.boundingBox[2].y - this.boundingBox[1].y
+  );
+  this.edges[2] = new Vector2(
+    this.boundingBox[3].x - this.boundingBox[2].x,
+    this.boundingBox[3].y - this.boundingBox[2].y
+  );
+  this.edges[3] = new Vector2(
+    this.boundingBox[0].x - this.boundingBox[3].x,
+    this.boundingBox[0].y - this.boundingBox[3].y
+  );
 }
 
 // Finds the minimum and maximum x and y bounds
@@ -205,8 +208,8 @@ Rectangle.prototype.updateBounds = function() {
     }
   }
 
-  this.boundingBox[4] = lowerBound;
-  this.boundingBox[5] = upperBound;
+  this.boundingBoxBounds[0] = lowerBound;
+  this.boundingBoxBounds[1] = upperBound;
 };
 
 // Draw the bounding box onto the canvas context
@@ -230,156 +233,11 @@ Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
   // context.moveTo( this.boundingBox[ 0 ].x, this.boundingBox[ 0 ].y );
 };
 
-// Rough collision approximation to check if rectangle is close to the polygon
-Rectangle.prototype.isRadiusCollision = function(polygon, radius) {
-
-  // If no radius, use the combinaed radii plus a bit more
-  if (!radius) {
-    radius = this.radius + polygon.radius + 20;
-  }
-
-  var hypot = Math.pow(polygon.pos.x - this.pos.x, 2) + Math.pow(polygon.pos.y - this.pos.y, 2);
-  if (hypot <= Math.pow(radius, 2)) {
-    return true;
-  }
-
-  return false;
-};
-
 /**
  * Find a collision between two polygons
  *
  * @returns {Vector2} - 2D minimum translation vector to resolve collision
  */
   Rectangle.prototype.isRotatedRectangleCollision = function(polygon) {
-
-  if (!this.isRadiusCollision(polygon)) {
-    return;
-  }
-
-  // Axis with the smallest amount of overlap is the minimum translation vector
-  var overlap = Infinity;
-  var smallest;
-
-  // Parallel edges of a rectangle are redundant so no need to check them
-  var edges1 = this.edges.length === 4 ? this.edges.slice(0, 2) : this.edges;
-  var edges2 = polygon.edges.length === 4 ? polygon.edges.slice(0, 2) : polygon.edges;
-  var edges = edges1.concat(edges2);
-
-  for (var i = 0; i < edges.length; i++) {
-
-    // Normalized normal of the edge
-    var axis = getUnitVector(normal(edges[i]));
-
-    // Project both polygons onto the axis
-    var p1 = projectPolygon(this, axis);
-    var p2 = projectPolygon(polygon, axis);
-
-    // Check if projections overlap
-    if (!overlapProjections(p1, p2)) {
-
-      // Guaranteed to not overlap if projections don't overlap
-      return;
-
-    } else {
-
-      // Amount of overlap between p1 and p2
-      var o = getOverlapProjections(p1, p2);
-
-      // Check for minimum
-      if (o < overlap) {
-        // Then set this one as the smallest
-        overlap = o;
-        smallest = axis;
-      }
-
-    }
-
-  }
-
-  // No collision
-  if (typeof smallest === 'undefined') {
-    return;
-  }
-
-  // Minimum translation vector
-  var mtv = getUnitVector(smallest);
-  mtv.x *= overlap;
-  mtv.y *= overlap;
-
-  // Distance between centers of both polygons  
-  var centerVector = {
-    x: polygon.pos.x - this.pos.x,
-    y: polygon.pos.y - this.pos.y,
-  };
-
-  // Reverse the direction of the mtv if needed
-  if (dotProduct(centerVector, mtv) >= 0) {
-    mtv.x *= -1;
-    mtv.y *= -1;
-  }
-
-  return mtv;
+      return Collision.detect(this, polygon);
 };
-
-function projectPolygon(polygon, vector) {
-  var vertices = polygon.boundingBox;
-
-  var max = dotProduct(vector, vertices[0]);
-  var min = max;
-
-  for (var i = 1; i < vertices.length - 2; i++) {
-    var dp = dotProduct(vector, vertices[i]);
-
-    if (dp < min) {
-      min = dp;
-    } else if (dp > max) {
-      max = dp;
-    }
-  }
-
-  return [min, max];
-}
-
-function overlapProjections(projection1, projection2) {
-  var min1 = projection1[0];
-  var max1 = projection1[1];
-  var min2 = projection2[0];
-  var max2 = projection2[1];
-
-  return !(min1 > max2 || min2 > max1);
-}
-
-function getOverlapProjections(projection1, projection2) {
-  var min1 = projection1[0];
-  var max1 = projection1[1];
-  var min2 = projection2[0];
-  var max2 = projection2[1];
-
-  return Math.min(max1, max2) - Math.max(min1, min2);
-}
-
-function normal(vector) {
-  return {
-    x: -vector.y,
-    y: vector.x,
-  };
-}
-
-function dotProduct(vectorA, vectorB) {
-  return vectorA.x * vectorB.x + vectorA.y * vectorB.y;
-}
-
-function getUnitVector(vector) {
-  var length = vector.x * vector.x + vector.y * vector.y;
-  return {
-    x: vector.x * vector.x / length,
-    y: vector.y * vector.y / length,
-  };
-}
-
-// Efficient approximation for the square root of a and b
-function sqrtApprox(a, b) {
-  // https://stackoverflow.com/questions/3506404/fast-hypotenuse-algorithm-for-embedded-processor
-  return 4142 * Math.abs(a) / 10000 + Math.abs(b);
-}

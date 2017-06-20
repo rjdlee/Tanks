@@ -42,6 +42,19 @@ describe('Rectangle', () => {
 
             expect(rectangle.lastPos.x).toEqual(10);
             expect(rectangle.lastPos.y).toEqual(10);
+
+            // Bounding box
+            expect(rectangle.boundingBox[0].x).toBeCloseTo(25);
+            expect(rectangle.boundingBox[0].y).toBeCloseTo(25);
+
+            expect(rectangle.boundingBox[1].x).toBeCloseTo(15);
+            expect(rectangle.boundingBox[1].y).toBeCloseTo(25);
+
+            expect(rectangle.boundingBox[2].x).toBeCloseTo(15);
+            expect(rectangle.boundingBox[2].y).toBeCloseTo(15);
+
+            expect(rectangle.boundingBox[3].x).toBeCloseTo(25);
+            expect(rectangle.boundingBox[3].y).toBeCloseTo(15);
         });
     });
 
@@ -115,11 +128,11 @@ describe('Rectangle', () => {
            expect(rectangle.edges[3].y).toBeCloseTo(-10);
 
            // Bounds
-           expect(rectangle.boundingBox[4].x).toBeCloseTo(-5);
-           expect(rectangle.boundingBox[4].y).toBeCloseTo(-5);
+           expect(rectangle.boundingBoxBounds[0].x).toBeCloseTo(-5);
+           expect(rectangle.boundingBoxBounds[0].y).toBeCloseTo(-5);
 
-           expect(rectangle.boundingBox[5].x).toBeCloseTo(5);
-           expect(rectangle.boundingBox[5].y).toBeCloseTo(5);
+           expect(rectangle.boundingBoxBounds[1].x).toBeCloseTo(5);
+           expect(rectangle.boundingBoxBounds[1].y).toBeCloseTo(5);
        });
     });
 
@@ -148,8 +161,9 @@ describe('Rectangle', () => {
             expect(collision.y).toBeCloseTo(-10);
         });
 
-        it('should detect a collision when rectangles are not touching', () => {
-           rectangleA.setPos(20, 20);
+        it('should not detect a collision when rectangles are not touching', () => {
+            rectangle.setPos(0, 0);
+            rectangleA.setPos(20, 20);
 
             const collision = rectangle.isRotatedRectangleCollision(rectangleA);
             expect(collision).toBeFalsy();
