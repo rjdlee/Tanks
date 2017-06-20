@@ -3,7 +3,7 @@
  */
 
 var Vector2 = Vector2;
-if (typeof window === 'undefined' && typeof require !== 'undefined') {
+if (typeof require !== 'undefined') {
   Vector2 = require('../common/vector2');
 
   module.exports = new CollisionClass();

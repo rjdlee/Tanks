@@ -8,7 +8,7 @@ Extends: Rectangle
 var Vector2 = Vector2;
 var Rectangle = Rectangle;
 var Collision = Collision;
-if (typeof window === 'undefined' && typeof require !== 'undefined') {
+if (typeof require !== 'undefined') {
   Vector2 = require('../common/vector2');
   Rectangle = require('../common/rectangle');
   Collision = require('../common/collision');

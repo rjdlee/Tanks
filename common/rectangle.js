@@ -5,15 +5,17 @@ Core geometry class with collision detection and a bounding box with matrix tran
 */
 
 var Vector2 = Vector2;
-if (typeof window === 'undefined' && typeof require !== 'undefined') {
+if (typeof require !== 'undefined') {
   Vector2 = require('../common/vector2');
 
   module.exports = Rectangle;
 }
 
 function Rectangle(config) {
+  config = config || {};
+
   // Position relative to canvas context
-  this.pos = config && config.pos ? config.pos : new Vector2();
+  this.pos = config.pos || new Vector2();
   this.lastPos = new Vector2(0, 0);
   this.offset = new Vector2(0, 0);
 
@@ -22,8 +24,8 @@ function Rectangle(config) {
   this.velocity = new Vector2(0, 0);
 
   // Total width and height
-  this.width = config && config.width ? config.width : 0;
-  this.height = config && config.height ? config.height : 0;
+  this.width = config.width || 0;
+  this.height = config.height || 0;
 
   // Used for optimizing bounding box calculations
   this.halfWidth = this.width / 2;
@@ -191,7 +193,7 @@ Rectangle.prototype.updateBounds = function() {
       lowerBound.x = currentBound.x;
     } else if (currentBound.x > upperBound.x) {
       upperBound.xi = i;
-      upperBound.x = currentBound.boundX
+      upperBound.x = currentBound.x
     }
 
     if (currentBound.y < lowerBound.y) {

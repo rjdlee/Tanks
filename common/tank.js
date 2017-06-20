@@ -5,6 +5,17 @@ Extends: Rectangle
 
 */
 
+var Vector2 = Vector2;
+var Rectangle = Rectangle;
+var TankBarrel = TankBarrel;
+if (typeof require !== 'undefined') {
+    Rectangle = require('./rectangle');
+    TankBarrel = require('./tankBarrel');
+    Vector2 = require('../common/vector2');
+
+    module.exports = Tank;
+}
+
 function Tank(x, y, angle) {
   // Extend the Rectangle class
   Rectangle.call(this, {
