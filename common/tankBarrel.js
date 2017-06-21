@@ -1,11 +1,6 @@
-var Vector2 = Vector2;
-var Rectangle = Rectangle;
-if (typeof require !== 'undefined') {
-    Rectangle = require('./rectangle');
-    Vector2 = require('../common/vector2');
-
-    module.exports = TankBarrel;
-}
+var Rectangle = Rectangle || require('./rectangle');
+var Vector2 = Vector2 || require('../common/vector2');
+module.exports = TankBarrel;
 
 function TankBarrel(x, y) {
   // Extend the Rectangle class

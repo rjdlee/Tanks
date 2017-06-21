@@ -2,10 +2,7 @@ var fs = require('fs'),
   vm = require('vm'),
   Wall = require('./wallRef'),
   Noise = require('./noise')();
-
-include('../common/vector2.js');
-include('../common/rectangle.js');
-include('../common/map.js');
+var Map = require('../common/map.js');
 
 function include(path) {
   var code = fs.readFileSync(path, 'utf-8');
@@ -29,8 +26,8 @@ function MapRef(width, height) {
   Map.call(this, width, height);
 
   this.generateMap();
-  this.generateWalls();
-  this.renderWalls();
+  // this.generateWalls();
+  // this.renderWalls();
 }
 
 MapRef.prototype = Object.create(Map.prototype);
@@ -41,15 +38,13 @@ MapRef.prototype.tick = function() {
   // Draw the players
   for (var i in this.players) {
     var player = this.players[i];
-    // player.tick( this );
-    // this.updateGridPos( player, 3 );
+    player.tick( this );
   }
 
   // Draw projectiles and check for collisions
   for (var i in this.projectiles) {
     var projectile = this.projectiles[i];
     projectile.tick(this);
-    // this.updateGridPos( projectile, 4 );
   }
 
   this.ticker++;

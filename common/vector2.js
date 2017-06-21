@@ -1,6 +1,4 @@
-if (typeof require !== 'undefined') {
-  module.exports = Vector2;
-}
+module.exports = Vector2;
 
 function Vector2(x, y) {
   if (typeof x === 'undefined') {

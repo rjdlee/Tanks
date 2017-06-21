@@ -1,13 +1,4 @@
-var fs = require('fs'),
-  vm = require('vm');
-
-include('../common/vector2.js');
-include('../common/wall.js');
-
-function include(path) {
-  var code = fs.readFileSync(path, 'utf-8');
-  vm.runInThisContext(code, path);
-}
+var Wall = require('../common/wall.js');
 
 function WallRef(x, y, width, height) {
   this.ref = {

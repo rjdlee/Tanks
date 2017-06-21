@@ -5,18 +5,12 @@ Extends: Rectangle
 
 */
 
-var Collision = Collision;
-var Vector2 = Vector2;
-var Rectangle = Rectangle;
-var TankBarrel = TankBarrel;
-if (typeof require !== 'undefined') {
-    Collision = require('./rectangle');
-    Rectangle = require('./rectangle');
-    TankBarrel = require('./tankBarrel');
-    Vector2 = require('../common/vector2');
-
-    module.exports = Tank;
-}
+var Collision = Collision || require('../common/collision');
+var Projectile = Projectile || require('../common/projectile');
+var Rectangle = Rectangle || require('../common/rectangle');
+var TankBarrel = TankBarrel || require('../common/tankBarrel');
+var Vector2 = Vector2 || require('../common/vector2');
+module.exports = Tank;
 
 function Tank(x, y, angle) {
   // Extend the Rectangle class

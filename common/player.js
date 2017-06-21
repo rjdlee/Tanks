@@ -4,6 +4,9 @@ A user who controls a
 
 */
 
+var Tank = Tank || require('../common/tank');
+module.exports = Player;
+
 function Player( id, x, y, angle )
 {
 	// Extend the Rectangle class
@@ -25,6 +28,7 @@ Player.prototype.tick = function ( map )
 	// Translate and rotate the tank body with current speed and angular speed
 	this.rotate( map.width, map.height, map.walls, map.players );
 	this.translate( map.width, map.height, map.walls, map.players );
+    console.log(this.pos);
 };
 
 Player.prototype.draw = function ( context, camera )

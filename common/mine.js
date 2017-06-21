@@ -5,16 +5,11 @@ Extends: Rectangle
 
 */
 
-var Vector2 = Vector2;
-var Rectangle = Rectangle;
-var Collision = Collision;
-if (typeof require !== 'undefined') {
-  Vector2 = require('../common/vector2');
-  Rectangle = require('../common/rectangle');
-  Collision = require('../common/collision');
+var Vector2 = Vector2 || require('../common/vector2');
+var Rectangle = Rectangle || require('../common/rectangle');
+var Collision = Collision || require('../common/collision');
 
-  module.exports = Mine;
-}
+module.exports = Mine;
 
 var COUNTDOWN_TIME = 2000; // ms
 var EXPLODE_TIME = 1000; // ms

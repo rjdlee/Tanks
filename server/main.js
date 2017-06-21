@@ -17,15 +17,22 @@ module.exports = function(io) {
   init();
 
   function init() {
-    setInterval(draw, 1000 / 10);
+    setInterval(draw, 3000);
   }
 
   function draw() {
     map.tick();
-    if (Object.keys(stateQueue).length > 0) {
-      io.sockets.emit('e', stateQueue);
-      stateQueue = {};
+    const ref = {};
+    for(id in map.players) {
+      const player = map.players[id];
+      ref[id] = player.ref;
     }
+    console.log(ref);
+    io.sockets.emit('e', ref);
+    // if (Object.keys(stateQueue).length > 0) {
+    //   io.sockets.emit('e', stateQueue);
+    //   stateQueue = {};
+    // }
   }
 
   io.on('connection', function(socket) {
@@ -114,14 +121,23 @@ function playerEventHandler(e) {
   if (!player)
     return;
 
-  if ('pos' in e) {
-    player.setPosWarp(e.pos, map);
-    playerLog.pos = player.ref.pos;
-  }
+  if('key' in e) {
+    const key = e.key;
+    if(key.up) {
+      player.setSpeed(15);
+    } else if(key.down) {
+      player.setSpeed(-15);
+    } else {
+      player.setSpeed(0);
+    }
 
-  if ('angle' in e) {
-    player.setAngle(e.angle);
-    playerLog.angle = player.ref.angle;
+    if(key.left) {
+      player.angle.speed = -0.05;
+    } else if(key.right) {
+      player.angle.speed = 0.05;
+    } else {
+      player.angle.speed = 0;
+    }
   }
 
   if ('mousemove' in e) {

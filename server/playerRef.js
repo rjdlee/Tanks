@@ -1,21 +1,5 @@
-var fs = require('fs'),
-  vm = require('vm'),
-  Vector2 = require('../common/vector2');
-Mine = require('../common/mine');
-
-include('../common/vector2.js');
-include('../common/rectangle.js');
-include('../common/circle.js');
-include('../common/projectile.js');
-include('../common/wall.js');
-include('../common/tankBarrel.js');
-include('../common/tank.js');
-include('../common/player.js');
-
-function include(path) {
-  var code = fs.readFileSync(path, 'utf-8');
-  vm.runInThisContext(code, path);
-}
+const Player = require('../common/player');
+const MAX_SPEED = 15;
 
 function PlayerRef(id, x, y) {
   this.ref = {
@@ -87,8 +71,7 @@ PlayerRef.prototype.setPosWarp = function(pos, map) {
 };
 
 PlayerRef.prototype.setSpeed = function(speed) {
-  if (Math.abs(speed) > 1.5)
-    return false;
+  speed = Math.sign(speed) * Math.min(Math.abs(speed), MAX_SPEED);
 
   this.setVelocity(speed);
   this.ref.speed = speed;

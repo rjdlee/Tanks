@@ -23,14 +23,22 @@ function init() {
 
 // Recursive function which will attempt to draw at 60fps
 function animate() {
-  requestAnimFrame(animate);
-  draw();
+  dranimate();
+    setInterval(function() {
+        // draw();
+        tick();
+    }, 1000);
+}
+
+function dranimate() {
+    requestAnimFrame(dranimate);
+    draw();
 }
 
 // Main drawing function to display tanks
 function draw() {
   if (!map || !user)
-    return false;
+    return;
 
   context.clearRect(0, 0, width, height);
   context.beginPath();
@@ -38,12 +46,18 @@ function draw() {
   terrainContext.clearRect(0, 0, width, height);
   terrainContext.beginPath();
 
-  map.tick();
-  map.draw(context, terrainContext, user.camera);
+    map.draw(context, terrainContext, user.camera);
 
   terrainContext.fill();
   context.stroke();
+}
 
-  // Send event data to the server
-  connect.sendStateQueue();
+function tick() {
+    if (!map || !user)
+        return;
+
+    map.tick();
+
+    // Send event data to the server
+    connect.sendStateQueue();
 }

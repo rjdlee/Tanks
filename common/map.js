@@ -1,3 +1,6 @@
+var Wall = Wall || require('../common/wall');
+module.exports = Map;
+
 function Map(width, height) {
   this.ticker = 0;
 

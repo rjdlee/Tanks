@@ -4,14 +4,9 @@ Core geometry class with collision detection and a bounding box with matrix tran
 
 */
 
-var Vector2 = Vector2;
-var Collision = Collision;
-if (typeof require !== 'undefined') {
-  Vector2 = require('../common/vector2');
-    Collision = require('./collision');
-
-  module.exports = Rectangle;
-}
+var Vector2 = Vector2 || require('../common/vector2');
+var Collision = Collision || require('../common/collision');
+module.exports = Rectangle;
 
 function Rectangle(config) {
   config = config || {};
@@ -222,6 +217,20 @@ Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
   if (!offsetY)
     offsetY = 0;
 
+  if(this.lastPos.x !== 0 && this.lastPos.y !== 0) {
+    const max_count = 300;
+      if(this.count == null) {
+          this.count = 0;
+      } else if(this.count > max_count - 2) {
+          this.count = 0;
+      } else {
+          this.count += 1;
+      }
+      const positions = interpolatePoints(this.lastPos, this.pos, max_count);
+      const position = positions[this.count];
+      offsetX += -position.x;
+      offsetY += -position.y;
+  }
   context.moveTo(boundingBox[0].x - offsetX, boundingBox[0].y - offsetY);
   context.lineTo(boundingBox[1].x - offsetX, boundingBox[1].y - offsetY);
   context.lineTo(boundingBox[2].x - offsetX, boundingBox[2].y - offsetY);
@@ -232,6 +241,22 @@ Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
   // context.arc( this.boundingBox[ 0 ].x, this.boundingBox[ 0 ].y, 2, 0, 6, false );
   // context.moveTo( this.boundingBox[ 0 ].x, this.boundingBox[ 0 ].y );
 };
+
+function interpolatePoints(pos1, pos2, points) {
+  const deltaPos = pos1.to(pos2);
+  const deltaSlice = deltaPos.divide(points);
+
+  const positions = [];
+  for(let i = 0; i < points; i++) {
+    // const x = deltaPos.x + deltaSlice.x;
+    // const y = deltaPos.y + deltaSlice.y;
+      const x = deltaSlice.x * i;
+      const y = deltaSlice.y * i;
+    positions.push(new Vector2(x, y));
+  }
+
+  return positions;
+}
 
 /**
  * Find a collision between two polygons
