@@ -21,13 +21,15 @@ function init() {
   connect = new Connect();
 }
 
+const TICK_PERIOD = 1000;
+
 // Recursive function which will attempt to draw at 60fps
 function animate() {
   dranimate();
     setInterval(function() {
         // draw();
         tick();
-    }, 1000);
+    }, TICK_PERIOD);
 }
 
 function dranimate() {

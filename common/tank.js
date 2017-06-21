@@ -9,7 +9,8 @@ var Collision = Collision || require('../common/collision');
 var Projectile = Projectile || require('../common/projectile');
 var Rectangle = Rectangle || require('../common/rectangle');
 var TankBarrel = TankBarrel || require('../common/tankBarrel');
-var Vector2 = Vector2 || require('../common/vector2');
+
+
 module.exports = Tank;
 
 function Tank(x, y, angle) {

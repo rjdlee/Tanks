@@ -121,15 +121,16 @@ function eventHandler(changeQueue) {
 
     if ('pos' in playerChanges) {
       if (id === user.id) {
-        // const deltaX = playerChanges.pos.x - player.pos.x;
-        // const deltaY = playerChanges.pos.y - player.pos.y;
-        // const newAngle = Math.atan2(deltaY, deltaX);
-        // player.setAngle(newAngle);
-        // player.setVelocity(Math.sqrt(deltaX * deltaX + deltaY * deltaY));
-          player.lastPos.x = player.pos.x;
-          player.lastPos.y = player.pos.y;
-          player.pos.x = playerChanges.pos.x;
-          player.pos.y = playerChanges.pos.y;
+        const deltaX = playerChanges.pos.x - player.pos.x;
+        const deltaY = playerChanges.pos.y - player.pos.y;
+        const newAngle = Math.atan2(deltaY, deltaX);
+        player.setAngle(newAngle);
+        player.setVelocity(Math.sqrt(deltaX * deltaX + deltaY * deltaY));
+        console.log(player.velocity);
+        //   player.lastPos.x = player.pos.x;
+        //   player.lastPos.y = player.pos.y;
+        //   player.pos.x = playerChanges.pos.x;
+        //   player.pos.y = playerChanges.pos.y;
           // if (playerChanges.hit) {
           //     player.setPos(playerChanges.pos.x, playerChanges.pos.y);
           // } else {
