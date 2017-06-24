@@ -61,10 +61,14 @@ function Rectangle(config) {
 
   // Bounding box: [ Top left, Top right, Bottom right, Bottom left ]
   this.setAngle(this.angle.rad);
+
+
+  this.counter = 0;
 }
 
 // Sets the rectangle's position to x and y and updates its bounding box
 Rectangle.prototype.setPos = function(x, y) {
+  this.counter = 0;
   this.lastPos.set(this.pos.x, this.pos.y);
   this.pos.set(x, y);
 
@@ -73,6 +77,7 @@ Rectangle.prototype.setPos = function(x, y) {
 
 // Moves the rectangle's position by x and y and updates its bounding box
 Rectangle.prototype.movePos = function(x, y) {
+    this.counter = 0;
   this.lastPos.set(this.pos.x, this.pos.y);
   this.pos.add(x, y);
 
@@ -211,11 +216,22 @@ Rectangle.prototype.updateBounds = function() {
 Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
   var boundingBox = this.boundingBox;
 
-  if (!offsetX)
-    offsetX = 0;
+  if(this.pos.to(this.lastPos).magnitude() > 0 && this.lastPos.magnitude() > 0) {
+    const max = 60;
+      this.counter++;
+      const point = interpolatePoints(this.lastPos, this.pos, 60, Math.max(0, max - 1 - this.counter));
 
-  if (!offsetY)
-    offsetY = 0;
+      offsetX += point.x;
+      offsetY += point.y;
+  }
+
+  if (!offsetX) {
+      offsetX = 0;
+  }
+
+  if (!offsetY) {
+      offsetY = 0;
+  }
 
   context.moveTo(boundingBox[0].x - offsetX, boundingBox[0].y - offsetY);
   context.lineTo(boundingBox[1].x - offsetX, boundingBox[1].y - offsetY);
@@ -228,20 +244,15 @@ Rectangle.prototype.drawBoundingBox = function(context, offsetX, offsetY) {
   // context.moveTo( this.boundingBox[ 0 ].x, this.boundingBox[ 0 ].y );
 };
 
-function interpolatePoints(pos1, pos2, points) {
+function interpolatePoints(pos1, pos2, points, index) {
   const deltaPos = pos1.to(pos2);
   const deltaSlice = deltaPos.divide(points);
 
-  const positions = [];
-  for(let i = 0; i < points; i++) {
-    // const x = deltaPos.x + deltaSlice.x;
-    // const y = deltaPos.y + deltaSlice.y;
-      const x = deltaSlice.x * i;
-      const y = deltaSlice.y * i;
-    positions.push(new Vector2(x, y));
+  if(index != null) {
+      const x = deltaSlice.x * index;
+      const y = deltaSlice.y * index;
+    return new Vector2(x, y);
   }
-
-  return positions;
 }
 
 /**

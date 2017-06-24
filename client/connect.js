@@ -120,29 +120,24 @@ function eventHandler(changeQueue) {
     }
 
     if ('pos' in playerChanges) {
-      if (id === user.id) {
-        const deltaX = playerChanges.pos.x - player.pos.x;
-        const deltaY = playerChanges.pos.y - player.pos.y;
-        const newAngle = Math.atan2(deltaY, deltaX);
-        player.setAngle(newAngle);
-        player.setVelocity(Math.sqrt(deltaX * deltaX + deltaY * deltaY));
-        console.log(player.velocity);
-        //   player.lastPos.x = player.pos.x;
+      // if (id === user.id) {
+          // player.lastPos.x = player.pos.x;
         //   player.lastPos.y = player.pos.y;
         //   player.pos.x = playerChanges.pos.x;
         //   player.pos.y = playerChanges.pos.y;
+        //   debugger;
           // if (playerChanges.hit) {
           //     player.setPos(playerChanges.pos.x, playerChanges.pos.y);
           // } else {
-          //     var newX = playerChanges.pos.x;
-          //     var newY = playerChanges.pos.y;
-          //     player.offset = player.pos.to(new Vector2(newX, newY));
+              var newX = playerChanges.pos.x;
+              var newY = playerChanges.pos.y;
+              player.offset = player.pos.to(new Vector2(newX, newY));
           // }
 
-        // player.camera.translate(player.pos.x, player.pos.y, map.width, map.height);
-      } else {
-        player.setPos(playerChanges.pos.x, playerChanges.pos.y);
-      }
+        player.camera.translate(player.pos.x, player.pos.y, map.width, map.height);
+      // } else {
+      //   player.setPos(playerChanges.pos.x, playerChanges.pos.y);
+      // }
     }
 
     if ('projectile' in playerChanges) {

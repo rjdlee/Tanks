@@ -24,12 +24,19 @@ function init() {
 const TICK_PERIOD = 1000;
 
 // Recursive function which will attempt to draw at 60fps
+let last_tick;
 function animate() {
   dranimate();
-    setInterval(function() {
-        // draw();
+    tickCycle();
+    // setInterval(draw, 500);
+}
+
+function tickCycle() {
+    setTimeout(function() {
+        last_tick = Date.now();
         tick();
-    }, TICK_PERIOD);
+        tickCycle();
+    }, TICK_PERIOD - (Date.now() - last_tick));
 }
 
 function dranimate() {
