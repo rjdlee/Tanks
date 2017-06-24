@@ -102,32 +102,32 @@ function rightClickListener(e) {
 function keyDownListener(e) {
   // Forward
   if (e.keyCode === 38 || e.keyCode === 87) {
-    // if (!this.key.down)
-      // this.setVelocity(1.5);
+    if (!this.key.down)
+      this.setVelocity(15);
 
     this.key.up = true;
   }
 
   // Backward
   if (e.keyCode === 40 || e.keyCode === 83) {
-    // if (!this.key.up)
-      // this.setVelocity(-1.5);
+    if (!this.key.up)
+      this.setVelocity(-15);
 
     this.key.down = true;
   }
 
   // Left
   if (e.keyCode === 37 || e.keyCode === 65) {
-    // if (!this.key.right)
-      // this.angle.speed = -0.05;
+    if (!this.key.right)
+      this.angle.speed = -0.5;
 
     this.key.left = true;
   }
 
   // Right
   if (e.keyCode === 39 || e.keyCode === 68) {
-    // if (!this.key.left)
-    //   this.angle.speed = 0.05;
+    if (!this.key.left)
+      this.angle.speed = 0.5;
 
     this.key.right = true;
   }
@@ -140,40 +140,40 @@ function keyUpListener(e) {
   if (e.keyCode === 38 || e.keyCode === 87) {
     this.key.up = false;
 
-    // if (this.key.down)
-    //   this.setVelocity(-1.5);
-    // else
-    //   this.setVelocity(0);
+    if (this.key.down)
+      this.setVelocity(-15);
+    else
+      this.setVelocity(0);
   }
 
   // Backward
   if (e.keyCode === 40 || e.keyCode === 83) {
     this.key.down = false;
 
-    // if (this.key.up)
-    //   this.setVelocity(1.5);
-    // else
-    //   this.setVelocity(0);
+    if (this.key.up)
+      this.setVelocity(15);
+    else
+      this.setVelocity(0);
   }
 
   // Left
   if (e.keyCode === 37 || e.keyCode === 65) {
     this.key.left = false;
 
-    // if (this.key.right)
-    //   this.angle.speed = 0.05;
-    // else
-    //   this.angle.speed = 0;
+    if (this.key.right)
+      this.angle.speed = 0.5;
+    else
+      this.angle.speed = 0;
   }
 
   // Right
   if (e.keyCode === 39 || e.keyCode === 68) {
     this.key.right = false;
 
-    // if (this.key.left)
-    //   this.angle.speed = -0.05;
-    // else
-    //   this.angle.speed = 0;
+    if (this.key.left)
+      this.angle.speed = -0.5;
+    else
+      this.angle.speed = 0;
   }
 
     connect.pushStateEvent('key', JSON.parse(JSON.stringify(this.key)));

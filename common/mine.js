@@ -8,7 +8,6 @@ Extends: Rectangle
 var Vector2 = Vector2 || require('../common/vector2');
 var Rectangle = Rectangle || require('../common/rectangle');
 var Collision = Collision || require('../common/collision');
-
 module.exports = Mine;
 
 var COUNTDOWN_TIME = 2000; // ms

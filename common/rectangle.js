@@ -109,12 +109,12 @@ Rectangle.prototype.rotateBoundingBox = function() {
   // Use a rotation transform matrix: cos(θ) -sin(θ) 0
   //                  sin(θ) cos(θ)  0
   //                  0    0     1
-  var cos = this.angle.cos,
-    sin = this.angle.sin,
-    offsetWidth = this.angle.width + this.halfWidth,
-    offsetHeight = this.angle.height + this.halfHeight,
-    offsetWidthMinus = -this.halfWidth + this.angle.width,
-    offsetHeightMinus = -this.halfHeight + this.angle.height;
+  const cos = this.angle.cos;
+  const sin = this.angle.sin;
+  const offsetWidth = this.angle.width + this.halfWidth;
+  const offsetHeight = this.angle.height + this.halfHeight;
+  const offsetWidthMinus = -this.halfWidth + this.angle.width;
+  const offsetHeightMinus = -this.halfHeight + this.angle.height;
 
   // After applying the matrix, translate the shape to its (x,y) position
   this.boundingBox[0] = new Vector2(

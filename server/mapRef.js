@@ -26,8 +26,8 @@ function MapRef(width, height) {
   Map.call(this, width, height);
 
   this.generateMap();
-  // this.generateWalls();
-  // this.renderWalls();
+  this.generateWalls();
+  this.renderWalls();
 }
 
 MapRef.prototype = Object.create(Map.prototype);

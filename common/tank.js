@@ -10,6 +10,7 @@ var Projectile = Projectile || require('../common/projectile');
 var Rectangle = Rectangle || require('../common/rectangle');
 var TankBarrel = TankBarrel || require('../common/tankBarrel');
 var Vector2 = Vector2 || require('../common/vector2');
+var Mine = Mine || require('../common/mine');
 
 module.exports = Tank;
 
@@ -46,7 +47,7 @@ Tank.prototype.movePos = function(x, y) {
 
 // Translate by current velocity; uses speed and velocity for translation
 Tank.prototype.translate = function(boundX, boundY, walls, players) {
-    const offsetMagnitude = Math.sqrt(this.offset.magnitude()) / 2;
+    const offsetMagnitude = Math.sqrt(this.offset.magnitude()) / 10;
     const offsetAngle = Math.atan2(this.offset.y, this.offset.x) || 0;
     const offsetX = offsetMagnitude * Math.cos(offsetAngle);
     const offsetY = offsetMagnitude * Math.sin(offsetAngle);
@@ -59,7 +60,6 @@ Tank.prototype.translate = function(boundX, boundY, walls, players) {
         const deltaX = this.velocity.x + offsetX;
         const deltaY = this.velocity.y + offsetY;
         this.movePos(deltaX, deltaY);
-        console.log('POS', this.boundingBox[0]);
     }
 
   if (this.angle.speed) {

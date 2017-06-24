@@ -35,21 +35,6 @@ Player.prototype.draw = function ( context, camera )
 	let offsetX = camera.pos.x;
 	let offsetY = camera.pos.y;
 
-    if(this.lastPos.x !== 0 && this.lastPos.y !== 0) {
-        // const max_count = 60;
-        // if(this.count == null) {
-        //     this.count = 0;
-        // } else if(this.count > max_count - 2) {
-        //     this.count = 0;
-        // } else {
-        //     this.count += 1;
-        // }
-        // const positions = interpolatePoints(this.lastPos, this.pos, max_count);
-        // const position = positions[this.count];
-        // offsetX += -position.x;
-        // offsetY += -position.y;
-    }
-
 	this.drawBoundingBox( context, offsetX, offsetY );
 	this.barrel.drawBoundingBox( context, offsetX, offsetY );
 };
