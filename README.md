@@ -27,9 +27,15 @@ and Worker name. It clones the prepared source into that repository and
 provisions the Durable Object automatically. Keep the account on Workers Free.
 
 To use the existing repository instead, connect `rjdlee/Tanks` in Cloudflare's
-Workers Git integration, select branch `codex/tanks-free-hosting`, leave the
-root directory at `/`, and use `npm run deploy` as the deploy command.
-Wrangler builds browser assets automatically. Alternatively, from an
+Workers Git integration, name the Worker `tank-time`, leave the root directory
+at `/`, and use `npm run build` and `npm run deploy` for the build and deploy
+commands. Keep preview builds off. If setup starts with the repository's default
+branch, cancel that initial build and set **Settings > Builds > Branch control >
+Production branch** to `codex/tanks-free-hosting`, then save. Push a commit to
+that branch to start a fresh production build; retrying an older build retains
+its original branch.
+
+Wrangler also builds browser assets automatically. Alternatively, from an
 authenticated terminal run `npx wrangler login` followed by `npm run deploy`.
 
 Cloudflare provides the final `https://<worker>.<account>.workers.dev` address.
