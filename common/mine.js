@@ -35,6 +35,7 @@ function Mine(pid, x, y) {
   // Time until explosion
   this.countdownTime = Date.now() + COUNTDOWN_TIME;
   this.explodeTime = this.countdownTime + EXPLODE_TIME;
+  this.hitPlayers = {};
 }
 
 Mine.prototype = Object.create(Rectangle.prototype);
@@ -47,7 +48,8 @@ Mine.prototype.explode = function(map) {
     if (Collision.near(this, player, 25 + player.radius)) {
       // The user object has a key attribute, but the player does not.
       // Only send the event if the user is hit
-      if ('key' in player) {
+      if ('key' in player && !(id in this.hitPlayers)) {
+        this.hitPlayers[id] = true;
         connect.pushStateEvent('hit', this.pid);
       }
     }
@@ -58,12 +60,13 @@ Mine.prototype.explode = function(map) {
 Mine.prototype.tick = function(map) {
   var currentTime = Date.now();
 
-  if (currentTime >= this.countdownTime) {
-    this.explode(map);
-  }
-
   if (currentTime >= this.explodeTime) {
     map.removeMine(this.id);
+    return;
+  }
+
+  if (currentTime >= this.countdownTime) {
+    this.explode(map);
   }
 };
 

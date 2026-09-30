@@ -17,8 +17,7 @@ function User(id, x, y, angle) {
     right: false
   };
 
-  this.lastPos = new Vector2(x, y);
-  this.lastAngle = this.angle.rad;
+  this.networkVelocity = {x: 0, y: 0};
   this.lastHeading = this.barrel.angle.rad;
   this.checkListeners();
 }
@@ -32,36 +31,45 @@ User.prototype.addCamera = function(width, height) {
 
 // Override player relative draw since we can't draw relative to ourself
 User.prototype.tick = function(map) {
-  // Rotate if there is angular sped
-  if (this.rotate(map.width, map.height, map.walls, map.players)) {
-    this.camera.translate(this.pos.x, this.pos.y, map.width, map.height);
-
-    // The player can rotate and translate if they are rotating
-    connect.pushStateEvent('angle', this.angle.rad);
+  var oldX = this.pos.x, oldY = this.pos.y;
+  this.translate(map.width, map.height, map.walls, map.players);
+  this.networkVelocity = {x: this.pos.x - oldX, y: this.pos.y - oldY};
+  this.camera.translate(this.pos.x, this.pos.y, map.width, map.height);
+  if (this.pos.x !== this.lastSentX || this.pos.y !== this.lastSentY ||
+      this.angle.rad !== this.lastSentAngle || this.speed !== this.lastSentSpeed ||
+      this.networkVelocity.x !== this.lastSentVelocityX || this.networkVelocity.y !== this.lastSentVelocityY) {
     connect.pushStateEvent('pos', this.pos);
-  }
-
-  // Translate if there is speed
-  if (this.translate(map.width, map.height, map.walls, map.players)) {
-    this.camera.translate(this.pos.x, this.pos.y, map.width, map.height);
-
-    if (Math.abs(this.angle.rad - this.lastAngle) > 0.1) {
-      connect.pushStateEvent('angle', this.angle.rad);
-    }
-
-    if (this.lastPos.to(this.pos).magnitude() > 0.1) {
-      connect.pushStateEvent('pos', this.pos);
-    }
+    this.lastSentX = this.pos.x;
+    this.lastSentY = this.pos.y;
+    this.lastSentAngle = this.angle.rad;
+    this.lastSentSpeed = this.speed;
+    this.lastSentVelocityX = this.networkVelocity.x;
+    this.lastSentVelocityY = this.networkVelocity.y;
   }
 };
 
 // Assign listeners for mousemove, mousedown, keydown, and keyup
 User.prototype.checkListeners = function() {
-  document.addEventListener('mousemove', mouseMoveListener.bind(this), false);
-  document.addEventListener('mousedown', leftClickListener.bind(this), false);
-  document.addEventListener('contextmenu', rightClickListener.bind(this), false);
-  document.addEventListener('keydown', keyDownListener.bind(this), false);
-  document.addEventListener('keyup', keyUpListener.bind(this), false);
+  this.listeners = {
+    mousemove: mouseMoveListener.bind(this), mousedown: leftClickListener.bind(this),
+    contextmenu: rightClickListener.bind(this), keydown: keyDownListener.bind(this),
+    keyup: keyUpListener.bind(this)
+  };
+  for (var type in this.listeners) document.addEventListener(type, this.listeners[type], false);
+  this.blurListener = function() {
+    this.key = {up: false, down: false, left: false, right: false};
+    this.setVelocity(0);
+    this.angle.speed = 0;
+    this.networkVelocity = {x: 0, y: 0};
+    connect.pushStateEvent('pos', this.pos);
+    connect.sendStateQueue();
+  }.bind(this);
+  window.addEventListener('blur', this.blurListener);
+};
+
+User.prototype.dispose = function() {
+  for (var type in this.listeners) document.removeEventListener(type, this.listeners[type], false);
+  window.removeEventListener('blur', this.blurListener);
 };
 
 function mouseMoveListener(e) {
@@ -87,9 +95,9 @@ function leftClickListener(e) {
   }
 
   if (rightclick) {
-    connect.pushStateEvent('rightclick', 0);
+    connect.predictAction('mine');
   } else {
-    connect.pushStateEvent('mousedown', this.barrel.angle.rad);
+    connect.predictAction('shoot');
   }
 }
 

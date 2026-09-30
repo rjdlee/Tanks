@@ -143,9 +143,11 @@ Vector2.prototype.leftNormal = function() {
 };
 
 Vector2.prototype.unitVector = function() {
-  const length = this.x * this.x + this.y * this.y;
-  const x = this.x * this.x / length;
-  const y = this.y * this.y / length;
+  const length = Math.sqrt(this.magnitude());
 
-  return new Vector2(x, y);
+  if (length === 0) {
+    return new Vector2();
+  }
+
+  return new Vector2(this.x / length, this.y / length);
 };

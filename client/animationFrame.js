@@ -33,13 +33,7 @@ Taken from http://www.paulirish.com/2011/requestanimationframe-for-smart-animati
     };
 }());
 
-// Recursive requestAnimationFrame
-window.requestAnimFrame = (function() {
-  // return window.requestAnimationFrame ||
-  // window.webkitRequestAnimationFrame ||
-  // window.mozRequestAnimationFrame ||
-  return function(callback) {
-    // window.setTimeout(callback, 100);
-    window.setTimeout(callback, 1000 / 60);
-  };
-})();
+// Keep callbacks aligned with the display refresh rate.
+window.requestAnimFrame = function(callback) {
+  return window.requestAnimationFrame(callback);
+};

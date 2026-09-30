@@ -5,7 +5,7 @@ include('../common/vector2.js');
 include('../common/wall.js');
 
 function include(path) {
-  var code = fs.readFileSync(path, 'utf-8');
+  var code = fs.readFileSync(require('path').resolve(__dirname, path), 'utf-8');
   vm.runInThisContext(code, path);
 }
 

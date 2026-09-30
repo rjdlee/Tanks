@@ -4,6 +4,7 @@ var fs = require('fs'),
 Mine = require('../common/mine');
 
 include('../common/vector2.js');
+include('../common/collision.js');
 include('../common/rectangle.js');
 include('../common/circle.js');
 include('../common/projectile.js');
@@ -13,7 +14,7 @@ include('../common/tank.js');
 include('../common/player.js');
 
 function include(path) {
-  var code = fs.readFileSync(path, 'utf-8');
+  var code = fs.readFileSync(require('path').resolve(__dirname, path), 'utf-8');
   vm.runInThisContext(code, path);
 }
 
@@ -121,12 +122,11 @@ PlayerRef.prototype.setHeading = function(angle) {
 };
 
 PlayerRef.prototype.shoot = function(map) {
-  if (map.ticker - this.lastShotTick < 3) {
+  if (map.ticker - this.lastShotTick < 18) {
       return false;
   }
 
-  var projectile = Player.prototype.shoot.call(this, this.projectiles);
-  this.ref.projectiles.push(projectile);
+  var projectile = Player.prototype.shoot.call(this, map.projectiles);
 
   this.lastShotTick = map.ticker;
 

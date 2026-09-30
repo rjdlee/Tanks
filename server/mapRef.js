@@ -8,7 +8,7 @@ include('../common/rectangle.js');
 include('../common/map.js');
 
 function include(path) {
-  var code = fs.readFileSync(path, 'utf-8');
+  var code = fs.readFileSync(require('path').resolve(__dirname, path), 'utf-8');
   vm.runInThisContext(code, path);
 }
 
@@ -31,6 +31,7 @@ function MapRef(width, height) {
   this.generateMap();
   this.generateWalls();
   this.renderWalls();
+  this.addWallBorders();
 }
 
 MapRef.prototype = Object.create(Map.prototype);
@@ -50,6 +51,14 @@ MapRef.prototype.tick = function() {
     var projectile = this.projectiles[i];
     projectile.tick(this);
     // this.updateGridPos( projectile, 4 );
+  }
+
+  // Clients report blast hits; the server only expires mines and frees their slots.
+  var currentTime = Date.now();
+  for (var id in this.mines) {
+    if (currentTime >= this.mines[id].explodeTime) {
+      this.removeMine(id);
+    }
   }
 
   this.ticker++;
