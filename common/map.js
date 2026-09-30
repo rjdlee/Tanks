@@ -40,16 +40,19 @@ Map.prototype.removePlayer = function(id) {
 Map.prototype.removeProjectile = function(id) {
   var projectile = this.projectiles[id];
 
-  if (id in this.projectiles)
-    delete this.projectiles[id];
+  if (!projectile) {
+    return;
+  }
+
+  delete this.projectiles[id];
 
   if (projectile.pid in this.players) {
     var player = this.players[projectile.pid];
 
-    for (var i = 0; i < player.projectiles; i++) {
+    for (var i = 0; i < player.projectiles.length; i++) {
       if (player.projectiles[i].id === id) {
         player.projectiles.splice(i, 1);
-        continue;
+        break;
       }
     }
   }
@@ -58,17 +61,19 @@ Map.prototype.removeProjectile = function(id) {
 Map.prototype.removeMine = function(id) {
   var mine = this.mines[id];
 
-  if (id in this.mines) {
-    delete this.mines[id];
+  if (!mine) {
+    return;
   }
+
+  delete this.mines[id];
 
   if (mine.pid in this.players) {
     var player = this.players[mine.pid];
 
-    for (var i = 0; i < player.mines; i++) {
+    for (var i = 0; i < player.mines.length; i++) {
       if (player.mines[i].id === id) {
         player.mines.splice(i, 1);
-        continue;
+        break;
       }
     }
   }

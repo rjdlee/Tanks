@@ -18,13 +18,36 @@ var context = mainCanvas.getContext('2d'),
 terrainContext.fillStyle = '#F1F1F1';
 
 function init() {
-  connect = new Connect();
+  if (!connect) connect = new Connect();
 }
 
-// Recursive function which will attempt to draw at 60fps
-function animate() {
-  requestAnimFrame(animate);
+var animationId = null, lastFrame = null, accumulator = 0;
+var tickDuration = 1000 / 60;
+
+function startAnimation() {
+  stopAnimation();
+  animationId = requestAnimFrame(animate);
+}
+
+function stopAnimation() {
+  if (animationId !== null) window.cancelAnimationFrame(animationId);
+  animationId = null;
+  lastFrame = null;
+  accumulator = 0;
+}
+
+function animate(now) {
+  if (!map || !user) return;
+  if (lastFrame !== null) accumulator += Math.min(100, now - lastFrame);
+  lastFrame = now;
+  while (accumulator + 0.001 >= tickDuration) {
+    map.tick();
+    accumulator -= tickDuration;
+  }
+  renderRemotePlayers(now);
   draw();
+  connect.sendStateQueue();
+  animationId = requestAnimFrame(animate);
 }
 
 // Main drawing function to display tanks
@@ -38,12 +61,8 @@ function draw() {
   terrainContext.clearRect(0, 0, width, height);
   terrainContext.beginPath();
 
-  map.tick();
   map.draw(context, terrainContext, user.camera);
 
   terrainContext.fill();
   context.stroke();
-
-  // Send event data to the server
-  connect.sendStateQueue();
 }

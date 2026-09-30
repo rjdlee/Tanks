@@ -146,8 +146,12 @@ describe('Rectangle', () => {
            rectangle.setAngle(3);
 
           const collision = rectangle.isRotatedRectangleCollision(rectangleA);
-          expect(collision.x).toBeCloseTo(-1.29);
-           expect(collision.y).toBeCloseTo(-7.61);
+          expect(collision.x).toBeCloseTo(1.089705);
+           expect(collision.y).toBeCloseTo(1.697115);
+
+           // Moving along the returned vector must separate the first rectangle.
+           rectangle.movePos(collision.x * 1.001, collision.y * 1.001);
+           expect(rectangle.isRotatedRectangleCollision(rectangleA)).toBeUndefined();
        });
 
         it('should detect a collision when rectangles are fully colliding (inside each other)', () => {
@@ -158,7 +162,8 @@ describe('Rectangle', () => {
 
             const collision = rectangle.isRotatedRectangleCollision(rectangleA);
             expect(collision.x).toBeCloseTo(0);
-            expect(collision.y).toBeCloseTo(-10);
+            // Either direction resolves a collision with identical centers.
+            expect(Math.abs(collision.y)).toBeCloseTo(10);
         });
 
         it('should not detect a collision when rectangles are not touching', () => {
