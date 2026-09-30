@@ -1,22 +1,4 @@
-var fs = require('fs'),
-  vm = require('vm'),
-  Vector2 = require('../common/vector2');
-Mine = require('../common/mine');
-
-include('../common/vector2.js');
-include('../common/collision.js');
-include('../common/rectangle.js');
-include('../common/circle.js');
-include('../common/projectile.js');
-include('../common/wall.js');
-include('../common/tankBarrel.js');
-include('../common/tank.js');
-include('../common/player.js');
-
-function include(path) {
-  var code = fs.readFileSync(require('path').resolve(__dirname, path), 'utf-8');
-  vm.runInThisContext(code, path);
-}
+var Player = require('../common/player');
 
 function PlayerRef(id, x, y) {
   this.ref = {
@@ -104,7 +86,7 @@ PlayerRef.prototype.setAngle = function(angle) {
   return angle;
 };
 
-Player.prototype.setAngleSpeed = function(speed) {
+PlayerRef.prototype.setAngleSpeed = function(speed) {
   if (Math.abs(speed) > 0.1)
     return false;
 

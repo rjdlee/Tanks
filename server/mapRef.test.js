@@ -2,10 +2,8 @@ const childProcess = require('child_process');
 
 describe('Server mine lifecycle', () => {
     it('should free mine slots on expiry without reporting client blast hits', () => {
-        // The legacy server loads shared classes into the global scope with vm.
-        // Isolate that loader so it cannot overwrite the test runner's globals.
+        // Isolate the deterministic clock from other tests.
         const result = childProcess.execFileSync(process.execPath, ['-e', `
-            // Match file-based Node startup, where require is not a global.
             var loadModule = require;
             delete global.require;
             var assert = loadModule('assert');

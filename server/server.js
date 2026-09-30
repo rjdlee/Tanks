@@ -3,8 +3,21 @@ var app = express();
 var port = Number(process.env.PORT || 8888);
 var host = process.env.HOST || '0.0.0.0';
 var server = app.listen(port, host, listenHandler);
-var io = require('socket.io')(server);
-var main = require('./main')(io);
+var WebSocketServer = require('ws').WebSocketServer;
+var hub = new (require('./socketHub'))();
+var main = require('./main')(hub);
+var webSockets = new WebSocketServer({noServer: true, maxPayload: 16384});
+server.on('upgrade', function(request, socket, head) {
+  var validOrigin = !request.headers.origin ||
+    request.headers.origin === (request.socket.encrypted ? 'https://' : 'http://') + request.headers.host;
+  if (request.url !== '/ws' || !validOrigin || hub.clients.size >= 32) {
+    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    return;
+  }
+  webSockets.handleUpgrade(request, socket, head, function(webSocket) {
+    hub.add(webSocket, require('crypto').randomUUID());
+  });
+});
 
 app.disable('x-powered-by');
 
@@ -20,7 +33,8 @@ app.use('/', express.static(__dirname + '/../common'));
 // so clients reconnect immediately instead of waiting for a heartbeat timeout.
 function shutdown() {
   main.stop();
-  io.close(function() { process.exit(0); });
+  hub.close();
+  server.close(function() { process.exit(0); });
   setTimeout(function() { process.exit(1); }, 10000).unref();
 }
 

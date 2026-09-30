@@ -9,11 +9,15 @@ var Collision = Collision;
 var Vector2 = Vector2;
 var Rectangle = Rectangle;
 var TankBarrel = TankBarrel;
+var Projectile = Projectile;
+var Mine = Mine;
 if (typeof require !== 'undefined') {
-    Collision = require('./rectangle');
+    Collision = require('./collision');
     Rectangle = require('./rectangle');
     TankBarrel = require('./tankBarrel');
     Vector2 = require('../common/vector2');
+    Projectile = require('./projectile');
+    Mine = require('./mine');
 
     module.exports = Tank;
 }
@@ -51,6 +55,7 @@ Tank.prototype.movePos = function(x, y) {
 
 // Translate by current velocity; uses speed and velocity for translation
 Tank.prototype.translate = function(boundX, boundY, walls, players) {
+  var collision, unitVector;
 
     const offsetMagnitude = this.offset.magnitude() / 10;
     const offsetAngle = Math.atan2(this.offset.y, this.offset.x) || 0;

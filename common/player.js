@@ -4,6 +4,12 @@ A user who controls a
 
 */
 
+var Tank = Tank;
+if (typeof require !== 'undefined') {
+  Tank = require('./tank');
+  module.exports = Player;
+}
+
 function Player( id, x, y, angle )
 {
 	// Extend the Rectangle class

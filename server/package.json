@@ -1,9 +1,0 @@
-{
-  "name": "tanks",
-  "version": "0.1.0",
-  "devDependencies": {
-    "express": "^4.14.0",
-    "jest": "^20.0.4",
-    "socket.io": "^1.3.5"
-  }
-}

@@ -1,7 +1,8 @@
 // Local input is rendered immediately. Only corrections to an acknowledged
 // position are applied; an old echo must never pull newer movement backwards.
 function Connect() {
-  this.socket = io();
+  this.socket = new GameSocket();
+  connectionStatus('Connecting…');
   this.reset();
   this.socket.on('connect', function() {
     this.reset();
@@ -59,6 +60,7 @@ Connect.prototype.sendStateQueue = function() {
 };
 
 function connectHandler(data) {
+  connectionStatus('');
   if (user) user.dispose();
   this.reset();
   this.generation = data.generation || 0;
@@ -85,11 +87,20 @@ function connectHandler(data) {
 }
 
 function disconnectHandler() {
+  connectionStatus('Connection lost. Reconnecting…');
   if (user) user.dispose();
   stopAnimation();
   user = undefined;
   map = undefined;
   this.reset();
+}
+
+function connectionStatus(message) {
+  var element = document.getElementById('connection-status');
+  if (element) {
+    element.textContent = message;
+    element.hidden = !message;
+  }
 }
 
 function addActionObject(kind, ref) {

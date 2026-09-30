@@ -22,7 +22,7 @@ function browser() {
     addEventListener() {}, removeEventListener() {},
     requestAnimFrame: callback => { frames[++nextFrame] = callback; return nextFrame; },
     cancelAnimationFrame: id => { delete frames[id]; },
-    io: () => socket, drawLeaderboard() {}, drawScore() {}
+    GameSocket: function() { return socket; }, drawLeaderboard() {}, drawScore() {}
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);

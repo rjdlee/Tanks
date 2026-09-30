@@ -5,6 +5,12 @@ Extends: Rectangle
 
 */
 
+var Rectangle = Rectangle;
+if (typeof require !== 'undefined') {
+  Rectangle = require('./rectangle');
+  module.exports = Wall;
+}
+
 // Width and height
 function Wall( x, y, width, height )
 {

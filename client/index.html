@@ -41,9 +41,10 @@
 </div>
 <div id='score' class='unselectable'></div>
 <ol id='leaderboard' class='unselectable'></ol>
+<div id='connection-status' role='status' hidden style='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10;background:white;padding:10px 16px;border:1px solid #ccc'></div>
 <canvas id='main-canvas' width=1200 height=710></canvas>
 <canvas id='terrain-canvas' width=1200 height=710></canvas>
-<script src='/socket.io/socket.io.js'></script>
+<script src='socket.js'></script>
 
 <script type='text/javascript' src='vector2.js'></script>
 <script type='text/javascript' src='collision.js'></script>

@@ -5,6 +5,14 @@ Extends: Rectangle
 
 */
 
+var Rectangle = Rectangle;
+var Vector2 = Vector2;
+if (typeof require !== 'undefined') {
+  Rectangle = require('./rectangle');
+  Vector2 = require('./vector2');
+  module.exports = Projectile;
+}
+
 function Projectile(pid, x, y, angle, speed) {
   // Extend the Rectangle class
   Rectangle.call(this, {

@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tank-time",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": true,
+  "preview_urls": false,
+  "build": {
+    "command": "node scripts/build-assets.cjs",
+    "watch_dir": ["client", "common", "server", "worker"]
+  },
+  "assets": {
+    "directory": "./build/assets",
+    "binding": "ASSETS",
+    "run_worker_first": ["/ws", "/healthz"],
+    "not_found_handling": "none"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "GAME", "class_name": "GameRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameRoom"] }]
+}

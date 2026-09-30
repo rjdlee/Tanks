@@ -1,16 +1,6 @@
-var fs = require('fs'),
-  vm = require('vm'),
+var Map = require('../common/map'),
   Wall = require('./wallRef'),
   Noise = require('./noise')();
-
-include('../common/vector2.js');
-include('../common/rectangle.js');
-include('../common/map.js');
-
-function include(path) {
-  var code = fs.readFileSync(require('path').resolve(__dirname, path), 'utf-8');
-  vm.runInThisContext(code, path);
-}
 
 function MapRef(width, height) {
   this.ref = {
@@ -64,7 +54,7 @@ MapRef.prototype.tick = function() {
   this.ticker++;
 };
 
-Map.prototype.updateGridPos = function(object, id) {
+MapRef.prototype.updateGridPos = function(object, id) {
   var x = Math.floor(object.pos.x / this.tileSize),
     y = Math.floor(object.pos.y / this.tileSize);
 
@@ -92,39 +82,38 @@ Map.prototype.updateGridPos = function(object, id) {
   object.gridPos.y = y;
 };
 
-Map.prototype.placePlayer = function(player) {
+MapRef.prototype.placePlayer = function(player) {
   if (!player)
     return false;
 
-  var tries = 0;
-  tryLoop: while (tries < 10) {
-    var posY = Math.ceil(Math.random() * (this.grid.length - 4)) + 2,
-      posX = Math.ceil(Math.random() * (this.grid[posY].length - 4)) + 2;
-
-    for (var y = -1; y < 2; y++) {
-      for (var x = -1; x < 2; x++) {
-        if (this.grid[posY + y][posX + x] !== 0)
-          continue tryLoop;
+  // Enumerate candidates instead of an unbounded random retry loop. A dense
+  // generated map must never exhaust a Worker's CPU while spawning a player.
+  var candidates = [];
+  for (var y = 1; y < this.grid.length - 1; y++) {
+    for (var x = 1; x < this.grid[y].length - 1; x++) {
+      var clear = true;
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          if (this.grid[y + dy][x + dx] !== 0) clear = false;
+        }
       }
+      if (clear) candidates.push({x: x, y: y});
     }
-
-    player.setPos(posX * this.tileSize, posY * this.tileSize);
-    player.gridPos.x = posX;
-    player.gridPos.y = posY;
-    player.ref.pos = player.pos;
-    player.translateBoundingBox();
-
-    this.grid[y][x] = 3;
-
-    return player.pos;
-
-    tries++;
   }
-
-  return false;
+  // The generated map keeps its outer grid cells empty. Their center leaves
+  // the tank inside the border even when no interior 3x3 patch is available.
+  var cell = candidates[Math.floor(Math.random() * candidates.length)];
+  var pos = cell ? {x: cell.x * this.tileSize, y: cell.y * this.tileSize} :
+    {x: this.tileSize * 1.5, y: this.tileSize * 1.5};
+  player.setPos(pos.x, pos.y);
+  player.gridPos.x = Math.floor(pos.x / this.tileSize);
+  player.gridPos.y = Math.floor(pos.y / this.tileSize);
+  player.ref.pos = player.pos;
+  player.translateBoundingBox();
+  return player.pos;
 };
 
-Map.prototype.generateMap = function() {
+MapRef.prototype.generateMap = function() {
   var gridSize = this.tileSize,
     gridWidth = Math.floor(this.width / gridSize),
     gridHeight = Math.floor(this.height / gridSize),
@@ -203,7 +192,7 @@ Map.prototype.generateMap = function() {
   this.wallTiles = wallTiles;
 };
 
-Map.prototype.generateWalls = function() {
+MapRef.prototype.generateWalls = function() {
   var wallTiles = this.wallTiles,
     grid = this.grid,
     walls = [];
@@ -269,7 +258,7 @@ Map.prototype.generateWalls = function() {
   }
 };
 
-Map.prototype.renderWalls = function() {
+MapRef.prototype.renderWalls = function() {
   var walls = this.walls;
 
   for (var i = walls.length - 1; i >= 0; i--) {
