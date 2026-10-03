@@ -1,87 +1,31 @@
-body {
-	margin: 0;
-	font-size: 0;
-	font-family: arial;
-}
+@font-face {font-family:Fredoka;src:url('../assets/fredoka.woff2') format('woff2');font-weight:100 1000;font-display:swap}
+:root {color-scheme:light;--ink:#343330;--cream:#f7ecd8;--teal:#17a6a2;--shadow:#9e7952}
+* {box-sizing:border-box}
+body {margin:0;overflow:hidden;background:#e8bd8d;color:var(--ink);font-family:Fredoka,"Arial Rounded MT Bold","Trebuchet MS",Arial,sans-serif;font-size:16px}
+button,input {font:inherit;color:inherit} button {cursor:pointer;touch-action:manipulation} button:focus-visible,input:focus-visible {outline:3px solid #098f8d;outline-offset:5px}
+[hidden] {display:none!important}.unselectable {user-select:none}.sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+canvas {position:fixed;inset:0;width:100%;height:100%} #terrain-canvas {z-index:0} #main-canvas {z-index:1;cursor:crosshair}
+#menu {position:fixed;inset:0;z-index:10;background:#e6bd8b;overflow:auto}
+.menu-scene {position:absolute;left:50%;top:50%;width:100vw;height:100vh;transform:translate(-50%,-50%);background:url('../assets/menu.webp') center/100% 100% no-repeat;font-size:min(.956vw,1.7vh)}
+.cream-card {background:linear-gradient(135deg,#fbf2e2,#f2e4cc);border:1px solid #dfc8a8;box-shadow:inset 1px 2px 2px #fff9ee,inset -1px -3px 3px #cbb595,0 5px 0 #b29772,0 9px 12px #67481e38;border-radius:24px}
+.menu-card {position:absolute;left:34.8%;top:38.5%;width:30.8%;height:43.5%;padding:1.8% 3.15%;border-radius:3em}
+.menu-card label {display:block;margin:.05em 0 .55em .4em;font-size:1.12em;font-weight:900;letter-spacing:.15em}
+.menu-card input {width:100%;height:2.2em;padding:.2em .85em;background:linear-gradient(#f2eee6,#faf6ee);border:2px solid #c7b79e;border-radius:.7em;box-shadow:inset 0 2px 3px #7a5b3933,0 1px 1px #fff;font-size:1.5em;font-weight:700}
+.play-button {display:flex;justify-content:center;align-items:center;gap:.45em;width:100%;border:2px solid #24938e;border-bottom-color:#0d5c58;border-radius:.8em;background:linear-gradient(145deg,#39c4bf 0%,#17a4a1 50%,#119994 100%);color:#fff3dc;box-shadow:inset 2px 3px 3px #9be3d8,inset -3px -5px 3px #008d89,0 7px 0 #0a6c68,0 10px 12px #6a4a3045;text-shadow:0 2px 0 #ac9c7b;font-size:3.2em;font-weight:1000;letter-spacing:.025em;line-height:1.1;padding:.35em .3em;transition:transform .12s,filter .12s}
+.menu-card .play-button {margin:.38em -.06em 0;width:112%;position:relative;left:-5%}
+.play-button span {display:block;width:.46em;height:.57em;background:#fff3dc;clip-path:polygon(0 0,100% 50%,0 100%);filter:drop-shadow(0 2px 1px #9d8a65)}.play-button:hover {filter:brightness(1.06)} .play-button:active {transform:translateY(4px);box-shadow:inset 1px 2px 3px #8de1d8,0 3px 0 #0a6c68}
+.ready-status {display:flex;align-items:center;justify-content:center;gap:.7em;margin:1.1em 0 .95em;font-size:1.16em;font-weight:700}.ready-status span {width:1em;height:1em;background:#24bd16;border:1px solid #159608;border-radius:50%;box-shadow:inset 1px 1px 2px #a4ee78}
+.menu-options {display:flex;gap:1em;justify-content:center;height:4em}.cream-button {border:1px solid #dcc7aa;background:linear-gradient(135deg,#fff6e7,#eee0c8);border-radius:1em;box-shadow:inset 1px 2px 2px #fffdf6,inset -1px -2px 2px #d4bc99,0 3px 0 #bda17c,0 4px 7px #6b482329;font-weight:900;padding:.65em 1em;transition:transform .12s}.cream-button:hover {filter:brightness(1.035)}.cream-button:active {transform:translateY(2px)}
+.help-button {display:flex;align-items:center;justify-content:center;gap:.65em;white-space:nowrap;flex:1;letter-spacing:.12em;font-size:1.13em;padding:.6em .5em}
+svg {width:1.8em;height:1.8em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.sound-button {display:flex;justify-content:center;align-items:center;min-width:5em}.sound-button svg {width:2.1em;height:2.1em}.speaker {fill:currentColor;stroke-width:1.5}.mute-slash {display:none;stroke:#ee6f59;stroke-width:3}.muted .sound-waves {display:none}.muted .mute-slash {display:block}
+.controls-strip {position:absolute;left:16.3%;top:86.5%;width:67.4%;height:11.2%;display:flex;align-items:center;justify-content:space-evenly;border-radius:1.8em;padding:.75em 1em;font-weight:700;font-size:1.06em}.controls-strip>div {display:flex;align-items:center;justify-content:center;gap:1em;height:65%;padding:0 1.4em;border-right:2px solid #cdb698}.controls-strip>div:last-child {border:0}
+kbd {display:inline-flex;align-items:center;justify-content:center;min-width:1.8em;padding:.12em .35em;border:1px solid #b5aa99;border-radius:.3em;background:linear-gradient(#f0ece4,#d7d1c5);box-shadow:inset 1px 1px 1px #fff,0 3px 0 #aca18e,0 4px 4px #7b624531;font:900 1em/1.4 "Trebuchet MS",sans-serif;letter-spacing:.06em}.key-cluster {display:flex;flex-direction:column;align-items:center;gap:3px}.key-cluster>span {display:flex;gap:3px}.space-key {width:9em;padding:.5em}.mouse-icon {position:relative;display:block;width:2.1em;height:3.25em;border:3px solid #4d4940;border-radius:1.2em;box-shadow:0 3px 0 #b69c77;background:#f5e8d3}.mouse-icon i {position:absolute;top:0;left:1px;width:.85em;height:1.1em;border-radius:.9em .1em .5em .2em;background:#1aa6a2;border-right:2px solid #4d4940}.clicking:after {content:'✦';position:absolute;color:#139e98;font-size:1.8em;left:.6em;top:-.8em}
+#hud {position:fixed;inset:0;pointer-events:none;z-index:3}#score {position:absolute;left:24px;top:22px;display:flex;align-items:center;gap:12px;padding:12px 20px;border-radius:20px;min-width:165px} .tank-avatar {position:static;width:54px;height:54px;flex-shrink:0}.hud-caption {font-size:11px;letter-spacing:.1em;font-weight:900;display:block}#score-value {display:block;font-size:34px;line-height:1.15}#leaderboard {position:absolute;right:24px;top:22px;list-style:none;margin:0;padding:9px 16px;min-width:185px;border-radius:20px}#leaderboard:empty {display:none}#leaderboard li {display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #decaac;font-size:16px;font-weight:800}#leaderboard li:last-child {border:0}#leaderboard .tank-avatar {width:35px;height:35px}#leaderboard .player-name {flex:1;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#leaderboard strong {font-size:24px;min-width:25px;text-align:right}.game-tools {position:absolute;left:24px;bottom:22px;display:flex;gap:10px;pointer-events:auto}.game-tools .cream-button {height:44px;min-width:46px;font-size:18px;padding:7px 11px}.game-tools .sound-button {min-width:50px}.game-tools svg {width:25px;height:25px}
+.mine-inventory {position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:9px 17px;border-radius:24px}.mine-token {position:relative;display:block;width:33px;height:30px;border-radius:50%;border:2px solid #514e48;background:linear-gradient(145deg,#777875,#292b2b);box-shadow:inset 1px 2px 1px #a2a39c,0 3px 0 #252726,0 4px 5px #6b4a384d}.mine-token:after {content:'';position:absolute;inset:6px 8px 8px;border-radius:50%;background:radial-gradient(circle at 35% 25%,#ffad92,#e64938 55%,#8c241c);box-shadow:0 1px 2px #151a17}.mine-token.used {opacity:.22;box-shadow:none}.mine-inventory kbd {font-size:10px;box-shadow:none;background:#f5ebdc;border-color:#d3bfa3}
+#connection-status {position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:20;padding:13px 22px;border-radius:40px;font-weight:800}#connection-status:before {content:'◉';color:#159c96;margin-right:10px}
+dialog {max-width:510px;width:calc(100% - 32px);padding:32px;color:var(--ink);z-index:30}dialog::backdrop {background:#35241170;backdrop-filter:blur(4px)}dialog h2 {font-size:36px;line-height:1.1;margin:4px 0 16px;font-weight:900}dialog p {line-height:1.5}dialog dl {display:grid;grid-template-columns:105px 1fr;align-items:center;gap:17px 12px;margin:25px 0}dialog dt {font-weight:800}dialog dd {margin:0;font-size:15px}.help-note {font-size:13px;color:#72634f}.dialog-close {position:absolute;right:16px;top:16px;padding:3px 10px;font-size:24px}.dialog-done {font-size:23px;margin-top:24px;padding:12px;border-radius:17px}
+@media (max-aspect-ratio:4/3) and (min-width:701px) {.menu-scene {width:100vw;height:100vh;background-size:auto 100%;font-size:1.7vh}.menu-card {left:50%;transform:translateX(-50%);width:54vh;padding:3.2vh 5.5vh}.controls-strip {left:3%;width:94%;font-size:1.6vh}.controls-strip>div {padding:0 .6em;gap:.6em}}
+@media (max-width:700px) {.menu-scene {width:100%;height:100%;min-height:790px;top:0;transform:translateX(-50%);background-size:auto 330px;background-position:center top;background-color:#e9c498;font-size:14px}.menu-card {left:50%;top:270px;transform:translateX(-50%);width:min(360px,90%);height:auto;padding:23px 31px 26px;border-radius:30px}.menu-card .play-button {font-size:38px}.menu-card label {font-size:13px}.menu-card input {font-size:20px}.menu-options {font-size:11px;height:45px}.ready-status {font-size:14px;margin:20px 0}.controls-strip {top:605px;left:5%;width:90%;height:auto;padding:14px 9px;display:grid;grid-template-columns:1fr 1fr;gap:15px 8px;font-size:11px;border-radius:20px}.controls-strip>div {padding:0;gap:10px;border:0;justify-content:flex-start;height:45px}.controls-strip .space-key {width:6em}.controls-strip .mouse-icon {margin-left:15px}#score {left:10px;top:12px;min-width:110px;padding:8px 12px;gap:6px}.tank-avatar {width:38px;height:38px}#score-value {font-size:25px}.hud-caption {font-size:9px}#leaderboard {right:10px;top:12px;min-width:125px;padding:5px 10px}#leaderboard li {font-size:12px;gap:6px}#leaderboard strong {font-size:19px}#leaderboard .tank-avatar {width:28px;height:28px}#leaderboard .player-name {max-width:72px}.game-tools {left:10px;bottom:14px;gap:7px}.mine-inventory {bottom:14px;left:auto;right:10px;transform:none;padding:8px 12px;gap:8px}.mine-inventory kbd {display:none}#connection-status {top:auto;bottom:80px;white-space:nowrap;font-size:13px}}
+@media (prefers-reduced-motion:reduce) {button {transition:none}}
 
-	.unselectable
-	{
-		-webkit-user-select: none;
-		-moz-user-select: none;
-		user-select: none;
-	}
-
-	h3
-	{
-		margin: 0;
-	}
-
-	.col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-10
-	{
-		vertical-align: top;
-		display: inline-block;
-		font-size: 1rem;
-	}
-
-	.col-1 { width: calc(10%); }
-	.col-2 { width: calc(20%); }
-	.col-3 { width: calc(30%); }
-	.col-4 { width: calc(40%); }
-	.col-5 { width: calc(50%); }
-	.col-6 { width: calc(60%); }
-	.col-7 { width: calc(70%); }
-	.col-8 { width: calc(80%); }
-	.col-9 { width: calc(90%); }
-	.col-10 { width: calc(100%); }
-
-canvas {
-	position: absolute;
-	top: 0;
-	left: 0;
-}
-
-	#main-canvas {
-	}
-
-	#terrain-canvas {
-	}
-
-#score, #leaderboard, #menu
-{
-	position: absolute;
-	z-index: 999999;
-}
-
-	#score
-	{
-		left: 1rem;
-		top: 1rem;
-		font-size: 1rem;
-	}
-
-	#leaderboard
-	{
-		right: 1rem;
-		top: 1rem;
-		margin: 0;
-		font-size: 1rem;
-	}
-
-	#menu
-	{
-		left: 20%;
-		top: 7.5%;
-		padding: 1rem 5%;
-		width: 50%;
-		background: #FFF;
-		border: 1px solid #CCC;
-		border-radius: 1rem;
-	}
-
-		.key
-		{
-			line-height: 2.25rem;
-			padding: 0.5rem;
-			border: 1px solid #CCC;
-			border-radius: 5px;
-		}
+#leaderboard {background:none;border:0;box-shadow:none;padding:0}#leaderboard li {background:linear-gradient(135deg,#fbf2e2,#f2e4cc);border:1px solid #dfc8a8;box-shadow:inset 1px 2px 2px #fff9ee,0 3px 0 #b29772,0 5px 9px #67481e28;border-radius:17px;padding:5px 13px;margin-bottom:8px}#leaderboard li:first-child::before {content:"♛";color:#e6ad20;font-size:24px;margin-right:1px}

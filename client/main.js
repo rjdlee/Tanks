@@ -17,6 +17,24 @@ var context = mainCanvas.getContext('2d'),
 
 terrainContext.fillStyle = '#F1F1F1';
 
+function resizeCanvases() {
+  width = window.innerWidth; height = window.innerHeight;
+  var ratio = Math.min(window.devicePixelRatio || 1, 2);
+  mainCanvas.width = terrainCanvas.width = Math.round(width * ratio);
+  mainCanvas.height = terrainCanvas.height = Math.round(height * ratio);
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  terrainContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+  if (user && map) {
+    user.camera.resize(width, height);
+    user.camera.translate(user.pos.x, user.pos.y, map.width, map.height);
+    draw();
+  }
+}
+if (typeof Art !== 'undefined') {
+  resizeCanvases();
+  window.addEventListener('resize', resizeCanvases);
+}
+
 function init() {
   if (!connect) connect = new Connect();
 }
@@ -54,6 +72,11 @@ function animate(now) {
 function draw() {
   if (!map || !user)
     return false;
+
+  if (typeof Art !== 'undefined') {
+    Art.draw(context, terrainContext, map, user, width, height);
+    return;
+  }
 
   context.clearRect(0, 0, width, height);
   context.beginPath();

@@ -36,3 +36,20 @@ describe('Server mine lifecycle', () => {
         expect(result).toEqual('mine lifecycle passed');
     });
 });
+
+it('spawns tanks clear of every cream block, crate, pit, and border in the reference arena', () => {
+  const result = childProcess.execFileSync(process.execPath, ['-e', `
+    const assert = require('assert');
+    const createPlayer = require('./playerRef');
+    const map = require('./mapRef')(1960, 1080);
+    const materials = new Set(map.ref.walls.map(wall => wall.material));
+    assert(materials.has('cream') && materials.has('crate') && materials.has('pit'));
+    for (let i = 0; i < 300; i++) {
+      const player = createPlayer('spawn', 0, 0);
+      map.placePlayer(player);
+      for (const wall of map.walls) assert(!player.isRotatedRectangleCollision(wall));
+    }
+    process.stdout.write('clear spawns');
+  `], {cwd: __dirname, encoding: 'utf8'});
+  expect(result).toEqual('clear spawns');
+});

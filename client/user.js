@@ -73,7 +73,9 @@ User.prototype.dispose = function() {
 };
 
 function mouseMoveListener(e) {
-  this.barrel.setPosAngle(e.clientX, e.clientY, this.camera);
+  var camera = this.camera;
+  this.barrel.setPosAngle((e.clientX - (camera.offsetX || 0)) / (camera.scale || 1),
+    (e.clientY - (camera.offsetY || 0)) / (camera.scale || 1), camera);
 
   // Only send the event if the change in angle is greater than 0.01
   if (Math.abs(this.barrel.angle.rad - this.lastHeading) > 0.01) {
@@ -84,6 +86,7 @@ function mouseMoveListener(e) {
 }
 
 function leftClickListener(e) {
+  if (inputBlocked(e) || (e.button !== undefined && e.button !== 0 && e.button !== 2)) return;
 
   // Determine if right click occurred
   // http://www.quirksmode.org/js/events_properties.html
@@ -102,12 +105,16 @@ function leftClickListener(e) {
 }
 
 function rightClickListener(e) {
+  if (inputBlocked(e)) return;
   e.preventDefault();
   return false;
 }
 
 // If up is pressed before down, move forward. When up is released, move backwards if down is still pressed.
 function keyDownListener(e) {
+  if (inputBlocked(e)) return;
+  if ([32, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 && e.preventDefault) e.preventDefault();
+  if (e.keyCode === 32 && !e.repeat) connect.predictAction('mine');
   // Forward
   if (e.keyCode === 38 || e.keyCode === 87) {
     if (!this.key.down)
@@ -139,6 +146,12 @@ function keyDownListener(e) {
 
     this.key.right = true;
   }
+}
+
+function inputBlocked(e) {
+  if (e.target && e.target.closest && e.target.closest('button, input, dialog, #menu')) return true;
+  var dialog = document.getElementById('help-dialog');
+  return !!(dialog && dialog.open);
 }
 
 function keyUpListener(e) {

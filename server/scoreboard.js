@@ -7,12 +7,6 @@ Scoreboard.prototype.getLeaderboard = function ()
 {
 	var leaderboard = this.list.slice( 0, 10 );
 
-	for ( var i = leaderboard.length - 1; i >= 0; i-- )
-	{
-		if ( leaderboard[ i ].score === 0 )
-			leaderboard.splice( i, 1 );
-	}
-
 	return leaderboard;
 };
 

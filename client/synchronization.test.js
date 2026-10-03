@@ -216,3 +216,23 @@ it('restores stable object IDs and projectile bounce state for late joiners', ()
   expect(s.user.projectiles).toHaveLength(1);
   expect(s.map.projectiles.bounced.bounceCount).toBe(1);
 });
+
+it('aims correctly through a scaled camera and keeps UI clicks and held Space from firing extra actions', () => {
+  const b = browser(), s = b.s;
+  s.user.camera.offsetX = 25;
+  s.user.camera.offsetY = 15;
+  const camera = s.user.camera;
+  const screenX = 25 + (s.user.pos.x + 100 - camera.pos.x) * camera.scale;
+  const screenY = 15 + (s.user.pos.y - camera.pos.y) * camera.scale;
+  b.listeners.mousemove[0]({clientX: screenX, clientY: screenY});
+  expect(Math.abs(s.user.barrel.angle.rad)).toBeCloseTo(Math.PI, 5);
+  b.listeners.mousedown[0]({button: 0, target: {closest: () => ({})}});
+  expect(s.user.projectiles).toHaveLength(0);
+  const space = {keyCode: 32, preventDefault() {}};
+  b.listeners.keydown[0](space);
+  b.listeners.keydown[0](Object.assign({}, space, {repeat: true}));
+  expect(s.user.mines).toHaveLength(1);
+  b.listeners.keydown[0](space);
+  b.listeners.keydown[0](space);
+  expect(s.user.mines).toHaveLength(2);
+});

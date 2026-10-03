@@ -68,6 +68,10 @@ module.exports = function(io) {
   io.on('connection', function(socket) {
     start();
     var id = socket.id, player = Player(id, 0, 0);
+    var occupiedColors = Object.keys(map.players).map(function(pid) { return map.players[pid].color; });
+    var color = 0;
+    while (color < 4 && occupiedColors.indexOf(color) !== -1) color++;
+    player.color = player.ref.color = color % 4;
     player.lastSequence = 0;
     player.lastAction = 0;
     player.generation = 0;
@@ -76,6 +80,7 @@ module.exports = function(io) {
     map.players[id] = player;
     map.ref.players[id] = player.ref;
     motion(player, logFor(id));
+    logFor(id).color = player.color;
 
     var projectiles = {}, mines = {};
     for (var pid in map.projectiles) projectiles[pid] = objectRef(map.projectiles[pid], 'shoot');
@@ -88,6 +93,10 @@ module.exports = function(io) {
 
     socket.on('init', function(name) {
       player.name = player.ref.name = typeof name === 'string' ? name.slice(0, 40) : 'Tanky';
+      scoreboard.add(id, player.score, player.name);
+      var log = logFor(id);
+      log.name = player.name;
+      log.leaderboard = scoreboard.getLeaderboard();
     });
 
     socket.on('disconnect', function() {
