@@ -1,6 +1,10 @@
 /build/
 /node_modules/
 /server/node_modules/
+/.wrangler/
+/.dev.vars
+/.env
+/.env.*
 
 .DS_Store
 .DS_Store?

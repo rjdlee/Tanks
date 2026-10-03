@@ -1,16 +1,6 @@
-var fs = require('fs'),
-  vm = require('vm'),
+var Map = require('../common/map'),
   Wall = require('./wallRef'),
-  Noise = require('./noise')();
-
-include('../common/vector2.js');
-include('../common/rectangle.js');
-include('../common/map.js');
-
-function include(path) {
-  var code = fs.readFileSync(require('path').resolve(__dirname, path), 'utf-8');
-  vm.runInThisContext(code, path);
-}
+  arenaWalls = require('../common/arena');
 
 function MapRef(width, height) {
   this.ref = {
@@ -28,9 +18,7 @@ function MapRef(width, height) {
 
   Map.call(this, width, height);
 
-  this.generateMap();
-  this.generateWalls();
-  this.renderWalls();
+  this.buildArena();
   this.addWallBorders();
 }
 
@@ -64,7 +52,7 @@ MapRef.prototype.tick = function() {
   this.ticker++;
 };
 
-Map.prototype.updateGridPos = function(object, id) {
+MapRef.prototype.updateGridPos = function(object, id) {
   var x = Math.floor(object.pos.x / this.tileSize),
     y = Math.floor(object.pos.y / this.tileSize);
 
@@ -92,202 +80,65 @@ Map.prototype.updateGridPos = function(object, id) {
   object.gridPos.y = y;
 };
 
-Map.prototype.placePlayer = function(player) {
+MapRef.prototype.placePlayer = function(player) {
   if (!player)
     return false;
 
-  var tries = 0;
-  tryLoop: while (tries < 10) {
-    var posY = Math.ceil(Math.random() * (this.grid.length - 4)) + 2,
-      posX = Math.ceil(Math.random() * (this.grid[posY].length - 4)) + 2;
-
-    for (var y = -1; y < 2; y++) {
-      for (var x = -1; x < 2; x++) {
-        if (this.grid[posY + y][posX + x] !== 0)
-          continue tryLoop;
+  // Enumerate candidates instead of an unbounded random retry loop. A dense
+  // generated map must never exhaust a Worker's CPU while spawning a player.
+  var candidates = [];
+  for (var y = 1; y < this.grid.length - 1; y++) {
+    for (var x = 1; x < this.grid[y].length - 1; x++) {
+      var clear = true;
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          if (this.grid[y + dy][x + dx] !== 0) clear = false;
+        }
+      }
+      if (clear) {
+        var px = x * this.tileSize, py = y * this.tileSize;
+        for (var id in this.players) {
+          var other = this.players[id];
+          if (other === player) continue;
+          var radius = player.radius + other.radius + 8;
+          if ((px - other.pos.x) * (px - other.pos.x) + (py - other.pos.y) * (py - other.pos.y) < radius * radius) clear = false;
+        }
+        if (clear) candidates.push({x: x, y: y});
       }
     }
-
-    player.setPos(posX * this.tileSize, posY * this.tileSize);
-    player.gridPos.x = posX;
-    player.gridPos.y = posY;
-    player.ref.pos = player.pos;
-    player.translateBoundingBox();
-
-    this.grid[y][x] = 3;
-
-    return player.pos;
-
-    tries++;
   }
-
-  return false;
+  // Select a clear cell, leaving room for both the hull and turning radius.
+  var cell = candidates[Math.floor(Math.random() * candidates.length)];
+  var pos = cell ? {x: cell.x * this.tileSize, y: cell.y * this.tileSize} :
+    {x: this.tileSize * 1.5, y: this.tileSize * 1.5};
+  player.setPos(pos.x, pos.y);
+  player.gridPos.x = Math.floor(pos.x / this.tileSize);
+  player.gridPos.y = Math.floor(pos.y / this.tileSize);
+  player.ref.pos = player.pos;
+  // setPos already translates the body and barrel exactly once.
+  return player.pos;
 };
 
-Map.prototype.generateMap = function() {
-  var gridSize = this.tileSize,
-    gridWidth = Math.floor(this.width / gridSize),
-    gridHeight = Math.floor(this.height / gridSize),
-    grid = new Array(gridHeight),
-    wallTiles = [],
-
-    threshold = 0;
-
-  Noise.seed(Math.random());
-
-  // Initial grid pass to populate with simplex noise
-  for (var y = 0; y < gridHeight; y++) {
-    var row = new Array(gridWidth);
-    grid[y] = row;
-
-    for (var x = 0; x < gridWidth; x++) {
-      // Do not place walls next to the map borders
-      if (y === 0 || y === gridHeight - 1 || x === 0 || x === gridWidth - 1) {
-        row[x] = 0;
-        continue;
-      }
-
-      if (y > 0 && grid[y - 1][x]) {
-        threshold = 0;
-      }
-
-      if (Noise.simplex2(x, y) > threshold) {
-        row[x] = 1;
-        threshold = 0;
-
-        wallTiles.push({
-          x: x,
-          y: y
-        });
-
-        if (y > 0 && grid[y - 1][x]) {
-          threshold = 0.6;
-        }
-
-        continue;
-      }
-
-      row[x] = 0;
-      threshold = 0.6;
-    }
-  }
-
-  // Replace diagonal walls by adding in corner tiles
-  for (var i in wallTiles) {
-    var tile = wallTiles[i];
-
-    // Example: X - -
-    //			- i -
-    //			- - -
-    // Fill in the point right above i
-    for (var y = -1; y < 2; y += 2) {
-      for (var x = -1; x < 2; x += 2) {
-        if (grid[tile.y + y][tile.x + x]) {
-          if (grid[tile.y][tile.x + x])
-            continue;
-
-          if (grid[tile.y + y][tile.x])
-            continue;
-
-          grid[tile.y + y][tile.x] = 1;
-          wallTiles.push({
-            x: x,
-            y: tile.y + y
-          });
-        }
+MapRef.prototype.buildArena = function() {
+  var columns = Math.floor(this.width / this.tileSize);
+  var rows = Math.floor(this.height / this.tileSize);
+  this.grid = [];
+  for (var y = 0; y < rows; y++) this.grid.push(Array.from({length:columns}, function(_, x) { return y === 0 || y === rows - 1 || x === 0 || x === columns - 1 ? 1 : 0; }));
+  arenaWalls(this.width, this.height).forEach(function(item) {
+    var wall = new Wall(item.x, item.y, item.width, item.height);
+    wall.material = wall.ref.material = item.material;
+    this.walls.push(wall);
+    this.ref.walls.push(wall.ref);
+    // Mark every tile intersecting a solid obstacle; spawn selection checks a
+    // clear 3x3 patch so tanks never appear inside the decorative geometry.
+    for (var y = 0; y < rows; y++) {
+      for (var x = 0; x < columns; x++) {
+        if (Math.abs(x * this.tileSize - item.x) <= (item.width + this.tileSize) / 2 &&
+            Math.abs(y * this.tileSize - item.y) <= (item.height + this.tileSize) / 2) this.grid[y][x] = 1;
       }
     }
-  }
-
-  this.grid = grid;
-  this.wallTiles = wallTiles;
+  }, this);
 };
-
-Map.prototype.generateWalls = function() {
-  var wallTiles = this.wallTiles,
-    grid = this.grid,
-    walls = [];
-
-  this.walls = walls;
-
-  for (var i = wallTiles.length - 1; i >= 0; i--) {
-    var tile = wallTiles[i],
-      wall = [{
-        x: tile.x,
-        y: tile.y
-      }, {
-        x: tile.x,
-        y: tile.y
-      }],
-      vertical = false;
-
-    if (grid[tile.y][tile.x] !== 1)
-      continue;
-
-    walls.push(wall);
-    grid[tile.y][tile.x] = 2;
-
-    for (var direction = -1; direction < 2; direction += 2) {
-      var offset = direction;
-
-      while (true) {
-        if (grid[tile.y + offset][tile.x]) {
-          if (direction === -1)
-            wall[0].y += direction;
-          else
-            wall[1].y += direction;
-
-          grid[tile.y + offset][tile.x] = 2;
-          offset += direction;
-          vertical = true;
-        } else {
-          break;
-        }
-      }
-    }
-
-    if (vertical)
-      continue;
-
-    for (var direction = -1; direction < 2; direction += 2) {
-      var offset = direction;
-
-      while (true) {
-        if (grid[tile.y][tile.x + offset]) {
-          if (direction === -1)
-            wall[0].x += direction;
-          else
-            wall[1].x += direction;
-
-          grid[tile.y][tile.x + offset] = 2;
-          offset += direction;
-        } else {
-          break;
-        }
-      }
-    }
-  }
-};
-
-Map.prototype.renderWalls = function() {
-  var walls = this.walls;
-
-  for (var i = walls.length - 1; i >= 0; i--) {
-    var wall = this.walls[i],
-      wallWidth = Math.max(wall[1].x - wall[0].x, 1) * 50,
-      wallHeight = Math.max(wall[1].y - wall[0].y, 1) * 50;
-
-    this.walls[i] = new Wall(wall[0].x * 50 - wallWidth / 2, wall[0].y * 50 - wallHeight / 2,
-      wallWidth, wallHeight);
-    this.ref.walls.push(this.walls[i].ref);
-  }
-}
-
-// Extract a digit from a random seed, digit starts at 1
-function getSeedDigit(seed, digit) {
-  digit = Math.pow(10, digit);
-  return Math.round((seed * digit) % 10);
-}
 
 module.exports = function(width, height) {
   return new MapRef(width, height);

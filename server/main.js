@@ -7,6 +7,7 @@ module.exports = function(io) {
   var boundX = 1960, boundY = 1080;
   var map = new Map(boundX, boundY), scoreboard = new Scoreboard(), stateQueue = {}, version = 0;
   var lastTick = Date.now(), accumulator = 0, step = 1000 / 60;
+  var timer = null, broadcast = null;
 
   function logFor(id) {
     return stateQueue[id] || (stateQueue[id] = {});
@@ -36,7 +37,7 @@ module.exports = function(io) {
   }
 
   // Physics and rendering use the same fixed step. Network delivery is 20Hz.
-  var timer = setInterval(function() {
+  function tick() {
     var now = Date.now();
     accumulator += Math.min(100, now - lastTick);
     lastTick = now;
@@ -44,16 +45,33 @@ module.exports = function(io) {
       map.tick();
       accumulator -= step;
     }
-  }, step);
-  var broadcast = setInterval(function() {
+  }
+  function flush() {
     if (Object.keys(stateQueue).length) {
       io.sockets.emit('e', {sequence: ++version, players: stateQueue});
       stateQueue = {};
     }
-  }, 50);
+  }
+  function start() {
+    if (timer !== null) return;
+    lastTick = Date.now();
+    accumulator = 0;
+    timer = setInterval(tick, step);
+    broadcast = setInterval(flush, 50);
+  }
+  function stop() {
+    clearInterval(timer);
+    clearInterval(broadcast);
+    timer = broadcast = null;
+  }
 
   io.on('connection', function(socket) {
+    start();
     var id = socket.id, player = Player(id, 0, 0);
+    var occupiedColors = Object.keys(map.players).map(function(pid) { return map.players[pid].color; });
+    var color = 0;
+    while (color < 4 && occupiedColors.indexOf(color) !== -1) color++;
+    player.color = player.ref.color = color % 4;
     player.lastSequence = 0;
     player.lastAction = 0;
     player.generation = 0;
@@ -62,6 +80,7 @@ module.exports = function(io) {
     map.players[id] = player;
     map.ref.players[id] = player.ref;
     motion(player, logFor(id));
+    logFor(id).color = player.color;
 
     var projectiles = {}, mines = {};
     for (var pid in map.projectiles) projectiles[pid] = objectRef(map.projectiles[pid], 'shoot');
@@ -73,13 +92,23 @@ module.exports = function(io) {
     });
 
     socket.on('init', function(name) {
-      player.name = player.ref.name = typeof name === 'string' ? name : 'Tanky';
+      player.name = player.ref.name = typeof name === 'string' ? name.slice(0, 40) : 'Tanky';
+      scoreboard.add(id, player.score, player.name);
+      var log = logFor(id);
+      log.name = player.name;
+      log.leaderboard = scoreboard.getLeaderboard();
     });
 
     socket.on('disconnect', function() {
       stateQueue[id] = {disconnect: true};
       if (scoreboard.remove(id) <= 10) stateQueue[id].leaderboard = scoreboard.getLeaderboard();
       map.removePlayer(id);
+      if (!Object.keys(map.players).length) {
+        stop();
+        stateQueue = {};
+        map.projectiles = {};
+        map.mines = {};
+      }
     });
 
     socket.on('e', function(packet) {
@@ -142,5 +171,5 @@ module.exports = function(io) {
     });
   });
 
-  return {map: map, stop: function() { clearInterval(timer); clearInterval(broadcast); }};
+  return {map: map, stop: stop};
 };

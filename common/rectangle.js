@@ -147,7 +147,7 @@ Rectangle.prototype.translateBoundingBox = function() {
   }
 
   this.updateEdges();
-  // No need to update bounds since those are passed by reference
+  this.updateBounds();
 };
 
 // Apply rotation and translation offsets to the bounding box

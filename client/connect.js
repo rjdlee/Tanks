@@ -1,7 +1,8 @@
 // Local input is rendered immediately. Only corrections to an acknowledged
 // position are applied; an old echo must never pull newer movement backwards.
 function Connect() {
-  this.socket = io();
+  this.socket = new GameSocket();
+  connectionStatus('Connecting…');
   this.reset();
   this.socket.on('connect', function() {
     this.reset();
@@ -33,6 +34,7 @@ Connect.prototype.predictAction = function(kind) {
   if (kind === 'shoot' && map.ticker - user.lastShotTick < 18) return;
   var object = kind === 'shoot' ? user.shoot(map.projectiles) : user.drop(map.mines);
   if (!object) return;
+  if (typeof Art !== 'undefined') Art.action(kind, user, object);
   if (kind === 'shoot') user.lastShotTick = map.ticker;
   var id = ++this.actionSequence;
   this.actions[id] = {kind: kind, object: object};
@@ -59,37 +61,64 @@ Connect.prototype.sendStateQueue = function() {
 };
 
 function connectHandler(data) {
+  connectionStatus('');
   if (user) user.dispose();
   this.reset();
   this.generation = data.generation || 0;
   this.lastServerSequence = data.sequence || 0;
   map = new Map(data.boundX, data.boundY);
+  if (typeof Art !== 'undefined') Art.reset();
   map.addWallBorders();
   map.players[data.id] = user = new User(data.id, data.pos.x, data.pos.y);
   user.lastShotTick = -18;
+  user.name = name;
+  user.color = data.players[data.id] && data.players[data.id].color;
   user.addCamera(window.innerWidth, window.innerHeight);
   user.camera.translate(user.pos.x, user.pos.y, map.width, map.height);
   for (var id in data.players) {
     if (id === user.id) continue;
     var ref = data.players[id];
     var player = map.players[id] = new Player(id, ref.pos.x, ref.pos.y, ref.angle);
+    updateCollisionBody(player, ref.pos, ref.angle || 0);
     player.barrel.setAngle(ref.heading || 0);
+    player.name = ref.name || 'Player';
+    player.score = ref.score || 0;
+    player.color = ref.color;
   }
   data.walls.forEach(function(wall) {
-    map.walls.push(new Wall(wall.pos.x, wall.pos.y, wall.width, wall.height));
+    var object = new Wall(wall.pos.x, wall.pos.y, wall.width, wall.height);
+    object.material = wall.material;
+    map.walls.push(object);
   });
   for (var pid in data.projectiles) addActionObject('shoot', data.projectiles[pid]);
   for (var mid in data.mines) addActionObject('mine', data.mines[mid]);
   drawLeaderboard(user.id, data.leaderboard);
+  if (data.players[data.id]) user.score = data.players[data.id].score || 0;
+  drawScore(user.score);
   startAnimation();
 }
 
 function disconnectHandler() {
+  connectionStatus('Connection lost. Reconnecting…');
   if (user) user.dispose();
   stopAnimation();
   user = undefined;
   map = undefined;
   this.reset();
+}
+
+function connectionStatus(message) {
+  var element = document.getElementById('connection-status');
+  if (element) {
+    element.textContent = message;
+    element.hidden = !message;
+  }
+}
+
+function updateCollisionBody(player, pos, angle) {
+  if (!player.collisionBody) player.collisionBody = new Rectangle({width: player.width, height: player.height});
+  player.collisionBody.setPos(pos.x, pos.y);
+  player.collisionBody.setAngle(angle);
 }
 
 function addActionObject(kind, ref) {
@@ -115,20 +144,26 @@ function addActionObject(kind, ref) {
 function eventHandler(packet) {
   if (!map || !user || !packet || packet.sequence <= this.lastServerSequence) return;
   this.lastServerSequence = packet.sequence;
-  var changes = packet.players;
+  var changes = packet.players, leaderboard;
   if (!changes) return;
   for (var id in changes) {
     var change = changes[id], player = map.players[id];
-    if (change.leaderboard) drawLeaderboard(user.id, change.leaderboard);
+    if (change.leaderboard) leaderboard = change.leaderboard;
     if (change.disconnect !== undefined) { map.removePlayer(id); continue; }
     if (!player && change.pos) player = map.players[id] = new Player(id, change.pos.x, change.pos.y);
     if (!player) continue;
+    if (change.name !== undefined) player.name = change.name;
+    if (change.color !== undefined) player.color = change.color;
+    if (id !== user.id && change.pos) {
+      updateCollisionBody(player, change.pos, change.angle === undefined ? player.angle.rad : change.angle);
+    }
     if (change.score !== undefined) {
       player.score = change.score;
       if (id === user.id) drawScore(player.score);
     }
     if (id === user.id) {
       if (change.generation > this.generation) {
+        if (typeof Art !== 'undefined') { Art.burst(player.pos.x, player.pos.y, 'blast'); GameAudio.play('hit'); }
         this.generation = change.generation;
         this.pending = {};
         this.stateQueue = {};
@@ -161,7 +196,10 @@ function eventHandler(packet) {
         heading: change.heading === undefined ? player.barrel.angle.rad : change.heading,
         velocity: change.velocity || {x: 0, y: 0}, hit: change.hit});
       if (player.snapshots.length > 10) player.snapshots.shift();
-      if (change.hit) { player.snapshots = [player.snapshots[player.snapshots.length - 1]]; player.setPos(change.pos.x, change.pos.y); }
+      if (change.hit) {
+        if (typeof Art !== 'undefined') { Art.burst(player.pos.x, player.pos.y, 'blast'); GameAudio.play('hit'); }
+        player.snapshots = [player.snapshots[player.snapshots.length - 1]]; player.setPos(change.pos.x, change.pos.y);
+      }
     } else if (change.heading !== undefined) player.barrel.setAngle(change.heading);
 
     (change.actions || []).forEach(function(action) {
@@ -178,9 +216,13 @@ function eventHandler(packet) {
           objects[predicted.object.id] = predicted.object;
         }
         delete this.actions[action.id];
-      } else if (action.object) addActionObject(action.kind, action.object);
+      } else if (action.object) {
+        var object = addActionObject(action.kind, action.object);
+        if (typeof Art !== 'undefined') Art.action(action.kind, player, object);
+      }
     }, this);
   }
+  if (leaderboard) drawLeaderboard(user.id, leaderboard);
 }
 
 // Interpolate remote players at the display refresh rate, with at most 100ms
@@ -194,10 +236,12 @@ function renderRemotePlayers(now) {
     var a = samples[0], b = samples[1] || a;
     var alpha = b.time > a.time ? Math.max(0, Math.min(1, (time - a.time) / (b.time - a.time))) : 1;
     var extra = Math.max(0, Math.min(100, time - b.time)) / (1000 / 60);
-    player.setPos(a.x + (b.x - a.x) * alpha + b.velocity.x * extra,
-      a.y + (b.y - a.y) * alpha + b.velocity.y * extra);
+    player.setPos(a.x + (b.x - a.x) * alpha, a.y + (b.y - a.y) * alpha);
     var angle = Math.atan2(Math.sin(b.angle - a.angle), Math.cos(b.angle - a.angle));
     player.setAngle(a.angle + angle * alpha);
+    // Extrapolation may reach a wall before a delayed stop snapshot arrives.
+    // Clip it at contact so the next snapshot cannot pull it back through a wall.
+    player.moveWithCollisions(b.velocity.x * extra, b.velocity.y * extra, map.walls, {});
     player.barrel.setAngle(b.heading);
   }
 }

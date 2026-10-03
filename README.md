@@ -1,30 +1,56 @@
-# tanks
-Multiplayer tanks game
+# Tank Time
 
-https://tank.rjdlee.com
+Multiplayer tanks with instant local controls and a shared WebSocket match.
 
-Run the game with `node server/server.js` and open `http://localhost:8888`.
-Run the regression suite with `npm test -- --runInBand`.
+## Run locally
+
+Use Node.js 24 and run `npm ci`.
+
+- `npm run dev` starts the Cloudflare Workers runtime at `http://localhost:8787`.
+- `npm start` runs the same game server in Node at `http://localhost:8888`.
+- `npm test -- --runInBand` runs physics and synchronization regressions.
+- `npm run test:worker` starts an isolated local Cloudflare runtime and tests
+  real multiplayer WebSockets, production assets, late joins, and reconnects.
 
 ## Free hosting
 
-`render.yaml` defines a single Render **Free** web service for both the browser
-game and its Socket.IO backend. Keeping them on the same HTTPS origin avoids a
-second hosting account and cross-origin multiplayer configuration.
+Cloudflare Workers serves both the website and `/ws` on one HTTPS origin. A
+SQLite-backed Durable Object binding routes every player to the same match.
+This uses the **Workers Free** plan; no paid subscription, external database,
+domain purchase, or app secrets are required. The SQLite migration is required
+for free-tier eligibility, even though live match state stays in memory.
 
-The service installs with `npm ci --omit=dev`, starts with `npm start`, and checks
-`/healthz`. It listens on Render's `PORT` on `0.0.0.0`; local development defaults
-to port 8888. Render supplies HTTPS and forwards WebSocket connections.
+[Deploy the prepared branch to Cloudflare](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Frjdlee%2FTanks%2Ftree%2Fcodex%2Ftanks-free-hosting)
 
-Use one instance: matches and scores live in process memory and reset when the
-service restarts. Free instances can sleep while idle and have usage limits;
-the first visit after sleep may need time to start. See
-[Render's free-service limits](https://render.com/docs/free) and
-[WebSocket hosting](https://render.com/docs/websocket). Do not upgrade to a paid
-instance to bypass a free-tier limit without the owner's approval.
+The deploy flow asks you to sign in, authorize GitHub, and choose a repository
+and Worker name. It clones the prepared source into that repository and
+provisions the Durable Object automatically. Keep the account on Workers Free.
 
-Automatic deployment is disabled in the Blueprint so unrelated repository
-changes do not restart an active game. Deploy frontend and backend together.
+To use the existing repository instead, connect `rjdlee/Tanks` in Cloudflare's
+Workers Git integration, name the Worker `tank-time`, leave the root directory
+at `/`, and use `npm run build` and `npm run deploy` for the build and deploy
+commands. Keep preview builds off. If setup starts with the repository's default
+branch, cancel that initial build and set **Settings > Builds > Branch control >
+Production branch** to `codex/tanks-free-hosting`, then save. Push a commit to
+that branch to start a fresh production build; retrying an older build retains
+its original branch.
+
+Wrangler also builds browser assets automatically. Alternatively, from an
+authenticated terminal run `npx wrangler login` followed by `npm run deploy`.
+
+Cloudflare provides the final `https://<worker>.<account>.workers.dev` address.
+Open it in two browsers and press Play; `/healthz` returns `{"status":"ok"}`.
+Always deploy frontend and backend together.
+
+The shared public match supports up to 32 simultaneous connections. Simulation
+and heartbeat timers stop when the match is empty. Silent connections expire
+after 45 seconds. Live matches and scores can reset on deployment or runtime
+restart; clients reconnect automatically and receive a fresh snapshot.
+
+Free hosting has daily request and compute limits. Exceeding them can interrupt
+play until the quota resets; this configuration does not upgrade the account.
+See [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)
+and [Durable Objects free limits](https://developers.cloudflare.com/durable-objects/platform/pricing/).
 
 ## Multiplayer synchronization
 

@@ -1,3 +1,9 @@
+var Wall = Wall;
+if (typeof require !== 'undefined') {
+  Wall = require('./wall');
+  module.exports = Map;
+}
+
 function Map(width, height) {
   this.ticker = 0;
 

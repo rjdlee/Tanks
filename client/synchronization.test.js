@@ -22,7 +22,7 @@ function browser() {
     addEventListener() {}, removeEventListener() {},
     requestAnimFrame: callback => { frames[++nextFrame] = callback; return nextFrame; },
     cancelAnimationFrame: id => { delete frames[id]; },
-    io: () => socket, drawLeaderboard() {}, drawScore() {}
+    GameSocket: function() { return socket; }, drawLeaderboard() {}, drawScore() {}
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
@@ -215,4 +215,53 @@ it('restores stable object IDs and projectile bounce state for late joiners', ()
   s.addActionObject('shoot', ref);
   expect(s.user.projectiles).toHaveLength(1);
   expect(s.map.projectiles.bounced.bounceCount).toBe(1);
+});
+
+it('aims correctly through a scaled camera and keeps UI clicks and held Space from firing extra actions', () => {
+  const b = browser(), s = b.s;
+  s.user.camera.offsetX = 25;
+  s.user.camera.offsetY = 15;
+  const camera = s.user.camera;
+  const screenX = 25 + (s.user.pos.x + 100 - camera.pos.x) * camera.scale;
+  const screenY = 15 + (s.user.pos.y - camera.pos.y) * camera.scale;
+  b.listeners.mousemove[0]({clientX: screenX, clientY: screenY});
+  expect(Math.abs(s.user.barrel.angle.rad)).toBeCloseTo(Math.PI, 5);
+  b.listeners.mousedown[0]({button: 0, target: {closest: () => ({})}});
+  expect(s.user.projectiles).toHaveLength(0);
+  const space = {keyCode: 32, preventDefault() {}};
+  b.listeners.keydown[0](space);
+  b.listeners.keydown[0](Object.assign({}, space, {repeat: true}));
+  expect(s.user.mines).toHaveLength(1);
+  b.listeners.keydown[0](space);
+  b.listeners.keydown[0](space);
+  expect(s.user.mines).toHaveLength(2);
+});
+
+it('clips remote extrapolation at a wall without changing its latest collision position', () => {
+  const b = browser(), s = b.s;
+  s.map.walls = [new s.Wall(160, 100, 50, 200)];
+  b.time(0);
+  b.receive(1, {peer: {pos: {x: 100, y: 100}, angle: 0, velocity: {x: 3, y: 0}}});
+  s.renderRemotePlayers(1000);
+  expect(s.map.players.peer.pos.x).toBeCloseTo(105, 2);
+  expect(s.map.players.peer.collisionBody.pos.x).toBe(100);
+  expect(s.Collision.detect(s.map.players.peer, s.map.walls[0])).toBeUndefined();
+});
+
+it('uses the peer network collision position independently of its rendered interpolation', () => {
+  const b = browser(), s = b.s;
+  b.time(0);
+  b.receive(1, {peer: {pos: {x: 370, y: 300}, angle: 0, velocity: {x: 0, y: 0}}});
+  // An old visual position overlaps self. It must never eject self sideways.
+  s.map.players.peer.setPos(325, 300);
+  s.user.setVelocity(1.5);
+  s.user.tick(s.map);
+  expect(s.user.pos.x).toBe(301.5);
+  expect(s.user.pos.y).toBe(300);
+  b.time(50);
+  b.receive(2, {peer: {pos: {x: 325, y: 300}, angle: 0, velocity: {x: 0, y: 0}}});
+  s.map.players.peer.setPos(400, 300);
+  s.user.tick(s.map);
+  expect(s.user.pos.x).toBe(301.5);
+  expect(s.user.pos.y).toBe(300);
 });

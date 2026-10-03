@@ -17,8 +17,27 @@ var context = mainCanvas.getContext('2d'),
 
 terrainContext.fillStyle = '#F1F1F1';
 
+function resizeCanvases() {
+  width = window.innerWidth; height = window.innerHeight;
+  var ratio = Math.min(window.devicePixelRatio || 1, 2);
+  mainCanvas.width = terrainCanvas.width = Math.round(width * ratio);
+  mainCanvas.height = terrainCanvas.height = Math.round(height * ratio);
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  terrainContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+  if (user && map) {
+    user.camera.resize(width, height);
+    user.camera.translate(user.pos.x, user.pos.y, map.width, map.height);
+    draw();
+  }
+}
+if (typeof Art !== 'undefined') {
+  resizeCanvases();
+  window.addEventListener('resize', resizeCanvases);
+}
+
 function init() {
-  if (!connect) connect = new Connect();
+  if (typeof gameplay !== 'undefined') gameplay.start(document.querySelector('input[name="mode"]:checked').value,document.getElementById('menu-room').value.trim().toLowerCase());
+  else if (!connect) connect = new Connect();
 }
 
 var animationId = null, lastFrame = null, accumulator = 0;
@@ -41,12 +60,15 @@ function animate(now) {
   if (lastFrame !== null) accumulator += Math.min(100, now - lastFrame);
   lastFrame = now;
   while (accumulator + 0.001 >= tickDuration) {
-    map.tick();
+    if (typeof gameplay !== 'undefined') gameplay.tick();
+    else map.tick();
     accumulator -= tickDuration;
   }
-  renderRemotePlayers(now);
+  if (typeof gameplay !== 'undefined') { gameplay.renderPeers(now);gameplay.hud(); }
+  else renderRemotePlayers(now);
   draw();
-  connect.sendStateQueue();
+  if (typeof gameplay !== 'undefined') gameplay.send();
+  else connect.sendStateQueue();
   animationId = requestAnimFrame(animate);
 }
 
@@ -54,6 +76,11 @@ function animate(now) {
 function draw() {
   if (!map || !user)
     return false;
+
+  if (typeof Art !== 'undefined') {
+    Art.draw(context, terrainContext, map, user, width, height);
+    return;
+  }
 
   context.clearRect(0, 0, width, height);
   context.beginPath();
