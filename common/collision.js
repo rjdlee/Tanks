@@ -61,22 +61,25 @@ CollisionBase.prototype.detect = function(polygon1, polygon2) {
     var p1 = projectPolygon(polygon1, axis);
     var p2 = projectPolygon(polygon2, axis);
 
-    // Check if projections overlap
-    if (!overlapProjections(p1, p2)) {
+    // Touching edges are contact, not penetration. Ignore floating point dust.
+    if (p1[1] <= p2[0] + 1e-7 || p2[1] <= p1[0] + 1e-7) {
 
       // Guaranteed to not overlap if projections don't overlap
       return;
 
     }
 
-      // Amount of overlap between p1 and p2
-      var o = getOverlapProjections(p1, p2);
+      // A contained interval must travel all the way to a face, not just its
+      // own width. Choose the shortest signed separation on this axis.
+      var negative = p1[1] - p2[0], positive = p2[1] - p1[0];
+      var direction = negative <= positive ? -1 : 1;
+      var o = Math.min(negative, positive);
 
       // Check for minimum
       if (o < overlap) {
         // Then set this one as the smallest
         overlap = o;
-        smallest = axis;
+        smallest = axis.multiply(direction);
       }
   }
 
@@ -90,35 +93,34 @@ CollisionBase.prototype.detect = function(polygon1, polygon2) {
   mtv.x *= overlap;
   mtv.y *= overlap;
 
-  // Distance between centers of both polygons  
-  var centerVector = new Vector2(polygon2.pos.x - polygon1.pos.x, polygon2.pos.y - polygon1.pos.y);
-
-  // Reverse the direction of the mtv if needed
-  if (centerVector.dot(mtv) >= 0) {
-    mtv.x *= -1;
-    mtv.y *= -1;
-  }
-
   return mtv;
 };
 
-function overlapProjections(projection1, projection2) {
-    var min1 = projection1[0];
-    var max1 = projection1[1];
-    var min2 = projection2[0];
-    var max2 = projection2[1];
-
-    return !(min1 > max2 || min2 > max1);
-}
-
-function getOverlapProjections(projection1, projection2) {
-    var min1 = projection1[0];
-    var max1 = projection1[1];
-    var min2 = projection2[0];
-    var max2 = projection2[1];
-
-    return Math.min(max1, max2) - Math.max(min1, min2);
-}
+// Continuous SAT: find the first contact over the proposed translation. This
+// stops at the surface before penetration, including long catch-up movements.
+CollisionBase.prototype.sweep = function(polygon1, polygon2, movement) {
+  var penetration = this.detect(polygon1, polygon2);
+  if (penetration) return {time: 0, normal: penetration.unitVector(), overlap: true};
+  var entry = -Infinity, exit = Infinity, normal;
+  var edges = polygon1.edges.slice(0, 2).concat(polygon2.edges.slice(0, 2));
+  for (var i = 0; i < edges.length; i++) {
+    var axis = edges[i].rightNormal().unitVector();
+    if (axis.magnitude() === 0) continue;
+    var a = projectPolygon(polygon1, axis), b = projectPolygon(polygon2, axis);
+    var speed = movement.dot(axis);
+    if (Math.abs(speed) < 1e-10) {
+      if (a[1] <= b[0] + 1e-7 || b[1] <= a[0] + 1e-7) return;
+      continue;
+    }
+    var first = (b[0] - a[1]) / speed, last = (b[1] - a[0]) / speed;
+    var start = Math.min(first, last), end = Math.max(first, last);
+    if (start > entry) { entry = start; normal = axis.multiply(speed > 0 ? -1 : 1); }
+    exit = Math.min(exit, end);
+    if (entry > exit + 1e-7) return;
+  }
+  if (!normal || entry < -1e-7 || entry > 1 || exit < 0) return;
+  return {time: Math.max(0, entry), normal: normal, overlap: false};
+};
 
 function projectPolygon(polygon, vector) {
     var vertices = polygon.boundingBox;

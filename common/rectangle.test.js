@@ -175,3 +175,12 @@ describe('Rectangle', () => {
         });
     });
 });
+
+it('updates numeric bounds as well as vertices after translation', () => {
+    const shape = new Rectangle({pos: new Vector2(100, 200), width: 50, height: 25});
+    shape.movePos(7, -3);
+    expect(shape.boundingBoxBounds[0].x).toBeCloseTo(82);
+    expect(shape.boundingBoxBounds[1].x).toBeCloseTo(132);
+    expect(shape.boundingBoxBounds[0].y).toBeCloseTo(184.5);
+    expect(shape.boundingBoxBounds[1].y).toBeCloseTo(209.5);
+});

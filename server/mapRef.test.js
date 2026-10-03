@@ -53,3 +53,30 @@ it('spawns tanks clear of every cream block, crate, pit, and border in the refer
   `], {cwd: __dirname, encoding: 'utf8'});
   expect(result).toEqual('clear spawns');
 });
+
+it('keeps collision geometry aligned after respawns and chooses unoccupied spawn cells', () => {
+    const result = childProcess.execFileSync(process.execPath, ['-e', `
+        const assert = require('assert');
+        const createPlayer = require('./playerRef');
+        const Collision = require('../common/collision');
+        const map = require('./mapRef')(1960, 1080);
+        Math.random = () => 0;
+        for (let i = 0; i < 12; i++) {
+            const player = createPlayer('peer' + i, 800, 600);
+            map.placePlayer(player);
+            const centerX = player.boundingBox.reduce((sum, p) => sum + p.x, 0) / 4;
+            const centerY = player.boundingBox.reduce((sum, p) => sum + p.y, 0) / 4;
+            assert(Math.abs(centerX - player.pos.x) < .00001);
+            assert(Math.abs(centerY - player.pos.y) < .00001);
+            for (const id in map.players) assert(!Collision.detect(player, map.players[id]));
+            map.players[player.id] = player;
+        }
+        const respawn = map.players.peer0;
+        respawn.setPos(900, 580);
+        map.placePlayer(respawn);
+        assert(Math.abs(respawn.boundingBox.reduce((sum, p) => sum + p.x, 0) / 4 - respawn.pos.x) < .00001);
+        for (const id in map.players) if (id !== respawn.id) assert(!Collision.detect(respawn, map.players[id]));
+        process.stdout.write('aligned and clear');
+    `], {cwd: __dirname, encoding: 'utf8'});
+    expect(result).toEqual('aligned and clear');
+});

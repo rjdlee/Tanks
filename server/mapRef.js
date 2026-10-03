@@ -95,11 +95,19 @@ MapRef.prototype.placePlayer = function(player) {
           if (this.grid[y + dy][x + dx] !== 0) clear = false;
         }
       }
-      if (clear) candidates.push({x: x, y: y});
+      if (clear) {
+        var px = x * this.tileSize, py = y * this.tileSize;
+        for (var id in this.players) {
+          var other = this.players[id];
+          if (other === player) continue;
+          var radius = player.radius + other.radius + 8;
+          if ((px - other.pos.x) * (px - other.pos.x) + (py - other.pos.y) * (py - other.pos.y) < radius * radius) clear = false;
+        }
+        if (clear) candidates.push({x: x, y: y});
+      }
     }
   }
-  // The generated map keeps its outer grid cells empty. Their center leaves
-  // the tank inside the border even when no interior 3x3 patch is available.
+  // Select a clear cell, leaving room for both the hull and turning radius.
   var cell = candidates[Math.floor(Math.random() * candidates.length)];
   var pos = cell ? {x: cell.x * this.tileSize, y: cell.y * this.tileSize} :
     {x: this.tileSize * 1.5, y: this.tileSize * 1.5};
@@ -107,7 +115,7 @@ MapRef.prototype.placePlayer = function(player) {
   player.gridPos.x = Math.floor(pos.x / this.tileSize);
   player.gridPos.y = Math.floor(pos.y / this.tileSize);
   player.ref.pos = player.pos;
-  player.translateBoundingBox();
+  // setPos already translates the body and barrel exactly once.
   return player.pos;
 };
 

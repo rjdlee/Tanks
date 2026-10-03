@@ -108,3 +108,22 @@ describe('Collision', () => {
         });
     });
 });
+
+it('separates a contained rectangle completely and treats edge contact as clear', () => {
+    const inner = new Rectangle({pos: new Vector2(0, 0), width: 10, height: 10});
+    const outer = new Rectangle({pos: new Vector2(0, 0), width: 100, height: 100});
+    const correction = Collision.detect(inner, outer);
+    expect(Math.sqrt(correction.magnitude())).toBeCloseTo(55);
+    inner.movePos(correction.x, correction.y);
+    expect(Collision.detect(inner, outer)).toBeUndefined();
+});
+
+it('finds first contact even when a whole movement would pass through a thin wall', () => {
+    const tank = new Rectangle({pos: new Vector2(0, 0), width: 50, height: 25});
+    const wall = new Rectangle({pos: new Vector2(100, 0), width: 2, height: 100});
+    const hit = Collision.sweep(tank, wall, new Vector2(200, 0));
+    expect(hit.time).toBeCloseTo(74 / 200);
+    expect(hit.normal.x).toBeCloseTo(-1);
+    expect(hit.normal.y).toBeCloseTo(0);
+    expect(Collision.sweep(tank, wall, new Vector2(-200, 0))).toBeUndefined();
+});

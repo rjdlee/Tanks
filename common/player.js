@@ -29,7 +29,6 @@ Player.prototype.constructor = Player;
 Player.prototype.tick = function ( map )
 {
 	// Translate and rotate the tank body with current speed and angular speed
-	this.rotate( map.width, map.height, map.walls, map.players );
 	this.translate( map.width, map.height, map.walls, map.players );
 };
 

@@ -79,6 +79,7 @@ function connectHandler(data) {
     if (id === user.id) continue;
     var ref = data.players[id];
     var player = map.players[id] = new Player(id, ref.pos.x, ref.pos.y, ref.angle);
+    updateCollisionBody(player, ref.pos, ref.angle || 0);
     player.barrel.setAngle(ref.heading || 0);
     player.name = ref.name || 'Player';
     player.score = ref.score || 0;
@@ -114,6 +115,12 @@ function connectionStatus(message) {
   }
 }
 
+function updateCollisionBody(player, pos, angle) {
+  if (!player.collisionBody) player.collisionBody = new Rectangle({width: player.width, height: player.height});
+  player.collisionBody.setPos(pos.x, pos.y);
+  player.collisionBody.setAngle(angle);
+}
+
 function addActionObject(kind, ref) {
   var objects = kind === 'shoot' ? map.projectiles : map.mines;
   if (objects[ref.id]) return objects[ref.id];
@@ -147,6 +154,9 @@ function eventHandler(packet) {
     if (!player) continue;
     if (change.name !== undefined) player.name = change.name;
     if (change.color !== undefined) player.color = change.color;
+    if (id !== user.id && change.pos) {
+      updateCollisionBody(player, change.pos, change.angle === undefined ? player.angle.rad : change.angle);
+    }
     if (change.score !== undefined) {
       player.score = change.score;
       if (id === user.id) drawScore(player.score);
@@ -226,10 +236,12 @@ function renderRemotePlayers(now) {
     var a = samples[0], b = samples[1] || a;
     var alpha = b.time > a.time ? Math.max(0, Math.min(1, (time - a.time) / (b.time - a.time))) : 1;
     var extra = Math.max(0, Math.min(100, time - b.time)) / (1000 / 60);
-    player.setPos(a.x + (b.x - a.x) * alpha + b.velocity.x * extra,
-      a.y + (b.y - a.y) * alpha + b.velocity.y * extra);
+    player.setPos(a.x + (b.x - a.x) * alpha, a.y + (b.y - a.y) * alpha);
     var angle = Math.atan2(Math.sin(b.angle - a.angle), Math.cos(b.angle - a.angle));
     player.setAngle(a.angle + angle * alpha);
+    // Extrapolation may reach a wall before a delayed stop snapshot arrives.
+    // Clip it at contact so the next snapshot cannot pull it back through a wall.
+    player.moveWithCollisions(b.velocity.x * extra, b.velocity.y * extra, map.walls, {});
     player.barrel.setAngle(b.heading);
   }
 }

@@ -26,8 +26,9 @@ function Tank(x, y, angle) {
   // Extend the Rectangle class
   Rectangle.call(this, {
     pos: new Vector2(x, y),
-    width: 50,
-    height: 25,
+    // Match the 60 x 38 toy hull drawn by the frontend (not its shadow/cannon).
+    width: 60,
+    height: 38,
     transform: {
       angle: angle || 0
     }
@@ -53,92 +54,92 @@ Tank.prototype.movePos = function(x, y) {
   this.barrel.movePos(x, y);
 };
 
-// Translate by current velocity; uses speed and velocity for translation
-Tank.prototype.translate = function(boundX, boundY, walls, players) {
-  var collision, unitVector;
+// Remote tanks render behind their latest network positions. Use their latest
+// collision body so interpolation/extrapolation cannot shove the local tank.
+function tankObstacles(tank, walls, players) {
+  var obstacles = (walls || []).map(function(wall) { return {body: wall, peer: false}; });
+  Object.keys(players || {}).sort().forEach(function(id) {
+    var player = players[id];
+    if (player === tank || (tank.id !== undefined && player.id === tank.id)) return;
+    obstacles.push({body: player.collisionBody || player, peer: true});
+  });
+  return obstacles;
+}
 
-    const offsetMagnitude = this.offset.magnitude() / 10;
-    const offsetAngle = Math.atan2(this.offset.y, this.offset.x) || 0;
-    const offsetX = offsetMagnitude * Math.cos(offsetAngle);
-    const offsetY = offsetMagnitude * Math.sin(offsetAngle);
-
-  // No speed means no move
-  if (this.speed || Math.abs(offsetX) > 0.5 || Math.abs(offsetY) > 0.5) {
-    this.offset.x -= offsetX;
-    this.offset.y -= offsetY;
-
-    const deltaX = this.velocity.x + offsetX;
-    const deltaY = this.velocity.y + offsetY;
-    this.movePos(deltaX, deltaY);
-  }
-
-  if (this.angle.speed) {
-    // Reset angle when it goes over 2π, otherwise increment it by speed
-    if (Math.abs(this.angle) >= 6.283185) {
-      this.setAngle(0);
-    } else {
-      this.setAngle(this.angle.rad + this.angle.speed);
+// Move to the first contact, then spend the remaining movement along its
+// tangent. No contact is allowed to add movement or eject an overlapping peer.
+Tank.prototype.moveWithCollisions = function(dx, dy, walls, players) {
+  var remaining = new Vector2(dx, dy), startX = this.pos.x, startY = this.pos.y;
+  var obstacles = tankObstacles(this, walls, players);
+  for (var iteration = 0; iteration < 4 && remaining.magnitude() > 1e-12; iteration++) {
+    var hit = null;
+    for (var i = 0; i < obstacles.length; i++) {
+      var obstacle = obstacles[i], contact = Collision.sweep(this, obstacle.body, remaining);
+      if (!contact) continue;
+      if (contact.overlap && obstacle.peer) {
+        // A delayed peer can arrive already overlapping. Stop approaching it,
+        // but allow escape; never apply its full penetration as a position jump.
+        var away = obstacle.body.pos.to(this.pos);
+        if (away.magnitude() < 1e-10) continue;
+        contact.normal = away.unitVector();
+      }
+      if (remaining.dot(contact.normal) >= -1e-10) continue;
+      if (!hit || contact.time < hit.time) hit = contact;
     }
+    if (!hit) { this.movePos(remaining.x, remaining.y); break; }
+    var length = Math.sqrt(remaining.magnitude());
+    var travel = Math.max(0, hit.time - .001 / length);
+    this.movePos(remaining.x * travel, remaining.y * travel);
+    remaining.multiply(1 - travel);
+    var inward = remaining.dot(hit.normal);
+    remaining.subtract(hit.normal.x * inward, hit.normal.y * inward);
   }
-
-  if (!this.speed && !this.angle.speed) {
-    return false;
-  }
-
-  // Check for collisions with walls
-  for (var id in walls) {
-    var wall = walls[id];
-
-    var mtv = this.isRotatedRectangleCollision(wall);
-    if (mtv) {
-      this.movePos(mtv.x, mtv.y);
-      collision = true;
-    }
-  }
-
-  // Check for collisions with other tanks and cancel velocity in the direction of the tank
-  unitVector = this.isTankCollision(players);
-  if (unitVector) {
-    this.movePos(unitVector.x, unitVector.y);
-    collision = true;
-  }
-
-  return true;
+  return new Vector2(this.pos.x - startX, this.pos.y - startY);
 };
 
-// Convenience method for rotate; uses angle.speed for rotation
+// Rotation is limited at contact instead of translating the center to fit.
 Tank.prototype.rotate = function(boundX, boundY, walls, players) {
-  // Don't perform any transforms if there is no radial velocity
-  // if (!this.angle.speed)
-  //   return false;
+  if (!this.angle.speed) return false;
+  var angle = this.angle.rad, delta = this.angle.speed;
+  var obstacles = tankObstacles(this, walls, players);
+  var depths = obstacles.map(function(obstacle) {
+    var overlap = Collision.detect(this, obstacle.body);
+    return overlap ? Math.sqrt(overlap.magnitude()) : 0;
+  }, this);
+  function blocked(fraction) {
+    this.setAngle(angle + delta * fraction);
+    for (var i = 0; i < obstacles.length; i++) {
+      var overlap = Collision.detect(this, obstacles[i].body);
+      if (overlap && Math.sqrt(overlap.magnitude()) > depths[i] + 1e-7) return true;
+    }
+    return false;
+  }
+  var fraction = 1;
+  if (blocked.call(this, 1)) {
+    var low = 0, high = 1;
+    for (var iteration = 0; iteration < 10; iteration++) {
+      var middle = (low + high) / 2;
+      if (blocked.call(this, middle)) high = middle;
+      else low = middle;
+    }
+    fraction = low;
+  }
+  var next = angle + delta * fraction;
+  if (Math.abs(next) >= Math.PI * 2) next = Math.atan2(Math.sin(next), Math.cos(next));
+  this.setAngle(next);
+  return fraction > 0;
+};
 
-  // // Reset angle when it goes over 2π, otherwise increment it by speed
-  // if (Math.abs(this.angle) >= 6.283185)
-  //   this.setAngle(0);
-  // else
-  //   this.setAngle(this.angle.rad + this.angle.speed);
-
-  // // Rotate off of walls
-  // for (var id in walls) {
-  //   var wall = walls[id];
-
-  //   var mtv = this.isRotatedRectangleCollision(wall);
-  //   if (mtv) {
-  //     this.movePos(mtv.x, mtv.y);
-  //   }
-  // }
-
-  // // Check for collisions with other tanks and cancel velocity in the direction of the tank
-  // var unitVector = this.isTankCollision(players);
-  // if (unitVector) {
-  //   // Shift the position by the tangential velocity projected onto the unit vector
-  //   var tangentialVelocity = this.radius * this.angle.speed;
-  //   this.movePos(tangentialVelocity * unitVector.x, tangentialVelocity * unitVector.y);
-
-  //   return true;
-  // }
-
-  return;
+Tank.prototype.translate = function(boundX, boundY, walls, players) {
+  this.rotate(boundX, boundY, walls, players);
+  // Legacy correction offsets are linear and bounded; squared lengths could
+  // turn a modest correction into a huge jump before collision resolution.
+  var length = Math.sqrt(this.offset.magnitude());
+  var correction = length > .01 ? this.offset.unitVector().multiply(Math.min(length / 10, 1.5)) : new Vector2();
+  this.offset.subtract(correction.x, correction.y);
+  if (!this.speed && correction.magnitude() === 0) return false;
+  this.moveWithCollisions(this.velocity.x + correction.x, this.velocity.y + correction.y, walls, players);
+  return true;
 };
 
 // Fire a projectile from the end of barrel and return the reference
