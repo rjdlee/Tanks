@@ -11,22 +11,28 @@
 </head>
 <body>
   <canvas id="terrain-canvas" aria-hidden="true"></canvas>
-  <canvas id="main-canvas" aria-label="Multiplayer tank arena"></canvas>
+  <canvas id="main-canvas" aria-label="Tank battle arena"></canvas>
   <main id="menu" class="unselectable">
     <div class="menu-scene">
       <h1 class="sr-only">Tank Time. A little tank. A big battle.</h1>
       <form id="join-form" class="menu-card cream-card">
+        <fieldset class="mode-picker"><legend>CHOOSE YOUR BATTLE</legend>
+          <label><input type="radio" name="mode" value="solo" checked><span>SOLO<small>Campaign</small></span></label>
+          <label><input type="radio" name="mode" value="coop"><span>CO-OP<small>Online · 2 players</small></span></label>
+          <label><input type="radio" name="mode" value="pvp"><span>PVP<small>Online · up to 8</small></span></label>
+        </fieldset>
         <label for="menu-name">YOUR NAME</label>
         <input id="menu-name" autocomplete="nickname" maxlength="24" placeholder="Player One" aria-label="Your name">
+        <div id="room-field" hidden><label for="menu-room">ROOM CODE <small>Leave blank to create or find a room</small></label><input id="menu-room" maxlength="32" pattern="[a-zA-Z0-9-]{1,32}" placeholder="Enter a friend's room code" autocomplete="off" aria-label="Room code"></div>
         <button id="menu-play" class="play-button" type="submit">PLAY <span aria-hidden="true"></span></button>
-        <p class="ready-status"><span></span>Ready to play</p>
+        <p class="ready-status" id="mode-description"><span></span>100 missions · 3 lives</p>
         <div class="menu-options">
           <button class="cream-button help-button" type="button" data-help><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-2-1-6-2-10 1Zm0 0v15"/></svg> HOW TO PLAY</button>
           <button class="cream-button sound-button" type="button" data-sound aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M3 9h4l5-4v14l-5-4H3Z"/><path class="sound-waves" d="M16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/><path class="mute-slash" d="m4 21 17-18"/></svg></button>
         </div>
       </form>
       <div class="controls-strip cream-card" aria-label="Game controls">
-        <div><span class="key-cluster"><kbd>W</kbd><span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></span><span>Move<br>your tank</span></div>
+        <div><span class="key-cluster"><kbd>W</kbd><span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></span><span>Drive<br>in any direction</span></div>
         <div><span class="mouse-icon"><i></i></span><span>Move mouse<br>to aim</span></div>
         <div><span class="mouse-icon clicking"><i></i></span><span>Click<br>to fire</span></div>
         <div><kbd class="space-key">SPACE</kbd><span>Drop<br>a mine</span></div>
@@ -34,17 +40,20 @@
     </div>
   </main>
   <div id="hud" class="unselectable" hidden>
-    <div id="score" class="cream-card"><canvas class="tank-avatar" width="96" height="96" aria-hidden="true"></canvas><div><span class="hud-caption">YOU · SCORE</span><strong id="score-value">0</strong></div></div>
+    <div id="campaign-hud" class="cream-card"><span id="mode-label">SOLO CAMPAIGN</span><strong id="mission-label">MISSION 1 / 100</strong><span id="lives-value">3 LIVES</span></div>
+    <div id="score" class="cream-card"><canvas class="tank-avatar" width="96" height="96" aria-hidden="true"></canvas><div><span class="hud-caption">TANKS DESTROYED</span><strong id="score-value">0</strong></div></div>
     <ol id="leaderboard" class="cream-card" aria-label="Leaderboard"></ol>
-    <div class="game-tools"><button class="cream-button" data-help aria-label="How to play">?</button><button class="cream-button sound-button" data-sound aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M3 9h4l5-4v14l-5-4H3Z"/><path class="sound-waves" d="M16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/><path class="mute-slash" d="m4 21 17-18"/></svg></button></div>
-    <div class="mine-inventory cream-card" aria-label="Available mines"><span class="mine-token"></span><span class="mine-token"></span><kbd>SPACE</kbd></div>
+    <div class="game-tools"><button id="leave-button" class="cream-button">MENU</button><button id="pause-button" class="cream-button">PAUSE</button><button id="invite-button" class="cream-button">INVITE</button><span id="room-label"></span><button class="cream-button" data-help aria-label="How to play">?</button><button class="cream-button sound-button" data-sound aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M3 9h4l5-4v14l-5-4H3Z"/><path class="sound-waves" d="M16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/><path class="mute-slash" d="m4 21 17-18"/></svg></button></div>
+    <div class="shell-inventory cream-card"><span>SHELLS</span><strong id="shell-count">5 / 5</strong></div><div class="mine-inventory cream-card" aria-label="Available mines"><span class="mine-token"></span><span class="mine-token"></span><kbd>SPACE</kbd></div>
   </div>
+  <section id="mission-panel" class="cream-card" role="region" aria-label="Mission status" hidden><h2 id="mission-panel-title"></h2><p id="mission-panel-detail"></p><div id="enemy-roster"></div><button id="mission-ready" class="play-button">START MISSION</button></section>
+  <div id="touch-controls" hidden><div class="touch-drive"><button data-drive="ArrowUp" aria-label="Drive up">▲</button><button data-drive="ArrowLeft" aria-label="Drive left">◀</button><button data-drive="ArrowDown" aria-label="Drive down">▼</button><button data-drive="ArrowRight" aria-label="Drive right">▶</button></div><div class="touch-actions"><button id="touch-fire">FIRE</button><button id="touch-mine">MINE</button></div></div>
   <div id="connection-status" class="cream-card" role="status" hidden></div>
   <dialog id="help-dialog" class="cream-card">
     <button class="dialog-close cream-button" aria-label="Close instructions">×</button>
-    <h2>A little tank.<br>A big battle.</h2><p>Hop into the arena and outsmart the other tanks.</p>
-    <dl><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Drive forward and backward</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn your tank</dd><dt>Mouse</dt><dd>Aim your turret</dd><dt>Click</dt><dd>Fire a shot — it bounces once!</dd><dt><kbd>SPACE</kbd></dt><dd>Drop a mine. Move away before it explodes.</dd></dl>
-    <p class="help-note">Two mines at a time. One point for every tank you hit.<br>Share this page with friends to join the same arena.</p>
+    <h2>Small tank.<br>Classic rules.</h2><p>Clear missions solo or with an online partner. Challenge friends in a separate PvP room.</p>
+    <dl><dt>WASD / arrows</dt><dd>Drive in any direction. Your hull turns independently of your turret.</dd><dt>Mouse</dt><dd>Aim your turret</dd><dt>Click</dt><dd>Fire a shot — it bounces once!</dd><dt><kbd>SPACE</kbd></dt><dd>Drop a mine. Its fuse is 10 seconds; shells and nearby tanks trigger it sooner.</dd></dl>
+    <p class="help-note">Five shells and two mines at a time. Shells cancel one another and fly over pits. Mines destroy cork crates. One hit destroys a tank—including friendly fire and your own ricochets.<br><br>Campaign: 3 lives, an extra life every 5 missions. A surviving co-op partner can finish the mission and bring you back. PvP: first to 10 in 3 minutes, with respawns.<br><br>Gamepad: left stick to drive, right stick to aim, right trigger to fire, left trigger to mine. On touch screens, use the direction pad and tap the arena to aim.<br><br>Campaign boards are reconstructions; matching original layouts is planned for a later update.</p>
     <button class="play-button dialog-done">GOT IT <span aria-hidden="true"></span></button>
   </dialog>
   <script src="socket.js"></script>
@@ -54,6 +63,6 @@
   <script src="projectile.js"></script><script src="tankBarrel.js"></script><script src="tank.js"></script>
   <script src="player.js"></script><script src="wall.js"></script><script src="map.js"></script>
   <script src="connect.js"></script><script src="camera.js"></script><script src="user.js"></script>
-  <script src="main.js"></script><script src="mine.js"></script>
+  <script src="main.js"></script><script src="mine.js"></script><script src="rules.js"></script><script src="missions.js"></script><script src="battle.js"></script><script src="play.js"></script>
 </body>
 </html>

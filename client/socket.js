@@ -1,5 +1,6 @@
 // Reconnecting WebSocket transport. Game prediction remains in connect.js.
-function GameSocket() {
+function GameSocket(path) {
+  this.path = path || '/ws';
   this.handlers = {};
   this.connected = false;
   this.retry = 0;
@@ -28,7 +29,7 @@ GameSocket.prototype.connect = function() {
   this.closed = false;
   clearTimeout(this.reconnectTimer);
   if (this.webSocket && this.webSocket.readyState < 2) return this;
-  var socket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+  var socket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + this.path);
   this.webSocket = socket;
   this.connectTimer = setTimeout(function() {
     if (this.webSocket === socket && !this.connected) socket.close();

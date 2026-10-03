@@ -49,8 +49,8 @@ test('Cloudflare runtime serves the game and synchronizes real WebSocket clients
     await delay(100);
   }
 
-  function connect(headers = {Origin: origin}) {
-    const ws = new WebSocket(origin.replace('http:', 'ws:') + '/ws', {headers});
+  function connect(headers = {Origin: origin}, route = '/ws') {
+    const ws = new WebSocket(origin.replace('http:', 'ws:') + route, {headers});
     const events = [];
     ws.on('message', message => events.push(JSON.parse(String(message))));
     ws.on('error', () => {});
@@ -137,5 +137,42 @@ test('Cloudflare runtime serves the game and synchronizes real WebSocket clients
     b.send('e', {seq: 1, generation: 0, pos: {x: 600, y: 500}});
     const state = await b.wait('e', packet => packet.players[bi.id]?.ack === 1);
     assert.equal(state.players[bi.id].pos.x, 600);
+  });
+
+  await t.test('isolates co-op rooms, waits for both partners, and applies authoritative commands', async () => {
+    const path='/ws?v=2&mode=coop&room=campaign-check';
+    const first=connect(undefined,path), partner=connect(undefined,path), other=connect(undefined,'/ws?v=2&mode=coop&room=another-room');
+    const one=await first.wait('init'), two=await partner.wait('init'), isolated=await other.wait('init');
+    assert.equal(one.state.mode,'coop');assert.ok(two.state.players[one.id]);assert.equal(isolated.state.players[one.id],undefined);
+    const full=connect(undefined,path);const [,response]=await once(full.ws,'unexpected-response');assert.equal(response.statusCode,503);full.ws.terminate();
+    first.send('init',{name:'Campaign A'});partner.send('init',{name:'Campaign B'});
+    first.send('e',{epoch:one.state.epoch,ready:true});partner.send('e',{epoch:two.state.epoch,ready:true});
+    await first.wait('e',packet=>packet.state.phase==='active');
+    first.send('e',{epoch:one.state.epoch,commands:[
+      {seq:1,x:1,y:0,heading:Math.PI,shoot:true},
+      {seq:2,x:0,y:0,heading:Math.PI,mine:true},
+      {seq:3,x:0,y:0,heading:Math.PI,mine:true}
+    ]});
+    const state=await first.wait('e',packet=>packet.acks[one.id]===3);
+    assert.equal(state.state.mines.filter(m=>m.pid===one.id).length,1);
+    assert.equal(state.state.projectiles.filter(s=>s.pid===one.id).length,1);
+    const position=state.state.players[one.id];assert.ok(position.x-one.state.players[one.id].x<=1.8);
+    first.send('e',{epoch:one.state.epoch,hit:two.id,score:999,pos:{x:9999,y:9999}});
+    const next=await first.wait('e',packet=>packet.state.ticker>state.state.ticker);
+    assert.equal(next.state.players[one.id].score,0);assert.equal(next.state.players[two.id].alive,true);
+    first.ws.close();await partner.wait('e',packet=>!packet.state.players[one.id]&&packet.state.phase==='waiting');
+  });
+
+  await t.test('uses separate PvP matches and restores all active combat objects for late joins', async () => {
+    const route='/ws?v=2&mode=pvp&room=pvp-check';
+    const first=connect(undefined,route),second=connect(undefined,route);const one=await first.wait('init'),two=await second.wait('init');
+    assert.equal(one.state.mode,'pvp');assert.equal(Object.values(two.state.players).filter(p=>p.npc).length,0);
+    first.send('e',{ready:true,epoch:one.state.epoch});second.send('e',{ready:true,epoch:two.state.epoch});
+    await first.wait('e',packet=>packet.state.phase==='active');
+    first.send('e',{epoch:one.state.epoch,commands:[{seq:1,x:0,y:0,heading:0,mine:true}]});
+    await first.wait('e',packet=>packet.acks[one.id]===1);
+    const late=connect(undefined,route),snapshot=await late.wait('init');
+    assert.equal(snapshot.state.mines.length,1);assert.ok(snapshot.state.players[one.id]);assert.ok(snapshot.state.elapsed>0);
+    assert.equal(snapshot.state.phase,'active');
   });
 });

@@ -60,6 +60,7 @@ function tankObstacles(tank, walls, players) {
   var obstacles = (walls || []).map(function(wall) { return {body: wall, peer: false}; });
   Object.keys(players || {}).sort().forEach(function(id) {
     var player = players[id];
+    if (player.alive === false) return;
     if (player === tank || (tank.id !== undefined && player.id === tank.id)) return;
     obstacles.push({body: player.collisionBody || player, peer: true});
   });

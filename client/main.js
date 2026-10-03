@@ -36,7 +36,8 @@ if (typeof Art !== 'undefined') {
 }
 
 function init() {
-  if (!connect) connect = new Connect();
+  if (typeof gameplay !== 'undefined') gameplay.start(document.querySelector('input[name="mode"]:checked').value,document.getElementById('menu-room').value.trim().toLowerCase());
+  else if (!connect) connect = new Connect();
 }
 
 var animationId = null, lastFrame = null, accumulator = 0;
@@ -59,12 +60,15 @@ function animate(now) {
   if (lastFrame !== null) accumulator += Math.min(100, now - lastFrame);
   lastFrame = now;
   while (accumulator + 0.001 >= tickDuration) {
-    map.tick();
+    if (typeof gameplay !== 'undefined') gameplay.tick();
+    else map.tick();
     accumulator -= tickDuration;
   }
-  renderRemotePlayers(now);
+  if (typeof gameplay !== 'undefined') { gameplay.renderPeers(now);gameplay.hud(); }
+  else renderRemotePlayers(now);
   draw();
-  connect.sendStateQueue();
+  if (typeof gameplay !== 'undefined') gameplay.send();
+  else connect.sendStateQueue();
   animationId = requestAnimFrame(animate);
 }
 

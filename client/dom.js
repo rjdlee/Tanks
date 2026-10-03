@@ -51,7 +51,7 @@ function syncSoundButtons() {
     name = getId('menu-name').value.trim() || 'Player One';
     try { localStorage.setItem('tank-time-name', name); } catch (error) {}
     GameAudio.unlock(); GameAudio.play('start');
-    init(); drawScore(0); drawLeaderboard(); toggleMenu();
+    init();
     getId('menu-name').blur();
   });
   document.querySelectorAll('[data-sound]').forEach(function(button) {
@@ -73,5 +73,15 @@ function syncSoundButtons() {
     var bounds = dialog.getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
   } });
+  function chooseMode() {
+    var mode = document.querySelector('input[name="mode"]:checked').value;
+    getId('room-field').hidden = mode === 'solo';
+    getId('mode-description').textContent = mode === 'solo' ? '100 missions · 3 lives' : mode === 'coop' ? 'Team up online · 2 players' : 'First to 10 · 3 minute rounds';
+  }
+  document.querySelectorAll('input[name="mode"]').forEach(function(input) { input.addEventListener('change', chooseMode); });
+  var params = new URLSearchParams(location.search), mode = params.get('mode');
+  if (mode === 'coop' || mode === 'pvp') document.querySelector('input[value="' + mode + '"]').checked = true;
+  if (/^[a-z0-9-]{1,32}$/i.test(params.get('room') || '')) getId('menu-room').value = params.get('room');
+  chooseMode();
   syncSoundButtons();
 })();
